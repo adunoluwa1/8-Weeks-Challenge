@@ -565,7 +565,8 @@
         LEFT JOIN pizza_toppings p
         ON c.exclusions = p.topping_id
         WHERE c.exclusions IS NOT NULL 
-        GROUP BY p.topping_name         
+        GROUP BY p.topping_name
+               
     -- 3. What was the most common exclusion? 
         --
         --
