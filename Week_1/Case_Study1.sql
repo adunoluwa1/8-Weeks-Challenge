@@ -146,9 +146,6 @@ SELECT * FROM members
             FROM menu m) as sq
 
 
-
-
-
 /*      Q5. Most popular item for each customer                                         */
 
     --Using Window Functions
@@ -266,7 +263,7 @@ SELECT * FROM members
         ON s.product_id = m.product_id
         WHERE DATEDIFF("DAY",me.join_date,s.order_date) < 0
 
-    --Using Joins and Window Functions
+    --Using Joins and Group BY
         SELECT DISTINCT s.customer_id, m.product_name, SUM(m.price) AS [Total Cost]
         FROM members me
         LEFT JOIN sales s
@@ -295,7 +292,7 @@ SELECT * FROM members
         FROM
             (SELECT s.customer_id, mn.product_name, mn.price,
                     CASE 
-                        WHEN [product_name] = 'sushi' THEN 2   -- use single quotes with case statements
+                        WHEN [product_name] = 'sushi' THEN 2   
                         ELSE 1
                     END AS multiplier
             FROM sales s
