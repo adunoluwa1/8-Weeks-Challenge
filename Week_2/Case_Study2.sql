@@ -557,16 +557,59 @@
                 FROM Orders o) AS sq
 
 /*
---          Q3.Ingredient Optimisation          */ --hard
+--          Q3.Ingredient Optimisation          */ 
+    -- 0. Creating view for toppings id 
+        -- https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
+        -- DROP VIEW pizza_toppings_pivoted 
+
+        CREATE VIEW pizza_toppings_pivoted AS
+            SELECT pizza_id,TRIM([value]) AS topping_id
+            FROM pizza_recipes
+            CROSS APPLY STRING_SPLIT(toppings,',')
+
+        CREATE VIEW pizza AS
+            SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
+            FROM pizza_names n
+            LEFT JOIN pizza_recipes r
+            ON r.pizza_id = n.pizza_id
+            LEFT JOIN pizza_toppings_pivoted pp
+            ON pp.pizza_id = n.pizza_id
+            LEFT JOIN pizza_toppings pt
+            ON pt.topping_id = pp.topping_id
+
+        SELECT * FROM Orders
+
+    
     -- 1. What are the standard ingredients for each pizza?
+            SELECT DISTINCT pizza_name, topping_name
+            FROM pizza
     -- 2. What was the most commonly added extra?
-        SELECT p.topping_name, COUNT(*)
-        FROM customer_orders c
-        LEFT JOIN pizza_toppings p
-        ON c.exclusions = p.topping_id
-        WHERE c.exclusions IS NOT NULL 
-        GROUP BY p.topping_name
-               
+        -- Using CTE
+            WITH extras_cte AS
+                (SELECT order_id, TRIM([value]) AS extras 
+                FROM customer_orders
+                CROSS APPLY string_split(extras,',')
+                WHERE extras IS NOT NULL)
+
+            SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered]
+            FROM extras_cte s
+            LEFT JOIN pizza_toppings t
+            ON t.topping_id = s.extras
+            GROUP BY topping_name
+
+        -- Using subquery
+            SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered]
+            FROM (SELECT order_id, TRIM([value]) AS extras 
+                 FROM customer_orders
+                 CROSS APPLY string_split(extras,',')
+                 WHERE extras IS NOT NULL) s
+            LEFT JOIN pizza_toppings t
+            ON t.topping_id = s.extras
+            GROUP BY topping_name
+
+        -- Using correlated subqueries
+            
+
     -- 3. What was the most common exclusion? 
         --
         --
