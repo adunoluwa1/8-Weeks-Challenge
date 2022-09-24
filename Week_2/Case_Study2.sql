@@ -284,21 +284,21 @@
         -- Using Subqueries in WHERE clause & Order view
 
             -- DROP VIEW Orders
-            CREATE VIEW Orders AS 
-                SELECT c.order_id,
-                    c.customer_id,
-                    c.pizza_id,
-                    c.order_time,
-                    c.exclusions,
-                    c.extras,
-                    r.runner_id,
-                    r.pickup_time,
-                    r.distance,
-                    r.duration,
-                    r.cancellation
-                FROM customer_orders c
-                LEFT JOIN runner_orders r
-                ON c.order_id = r.order_id
+            -- CREATE VIEW Orders AS 
+            --     SELECT c.order_id,
+            --         c.customer_id,
+            --         c.pizza_id,
+            --         c.order_time,
+            --         c.exclusions,
+            --         c.extras,
+            --         r.runner_id,
+            --         r.pickup_time,
+            --         r.distance,
+            --         r.duration,
+            --         r.cancellation
+            --     FROM customer_orders c
+            --     LEFT JOIN runner_orders r
+            --     ON c.order_id = r.order_id
             
             --
             SELECT *
@@ -433,9 +433,6 @@
                    WHERE DATENAME(WEEKDAY, c.order_time) = DATENAME(WEEKDAY, co.order_time)) AS [Volume Ordered]
             FROM customer_orders c
 
-
-
-
 /*
 --          Q2.Runner and Customer Experience   */
     -- 1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
@@ -564,22 +561,22 @@
         -- https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
         -- DROP VIEW pizza_toppings_pivoted 
 
-        CREATE VIEW pizza_toppings_pivoted AS
-            SELECT pizza_id,TRIM([value]) AS topping_id
-            FROM pizza_recipes
-            CROSS APPLY STRING_SPLIT(toppings,',')
+        -- CREATE VIEW pizza_toppings_pivoted AS
+        --     SELECT pizza_id,TRIM([value]) AS topping_id
+        --     FROM pizza_recipes
+        --     CROSS APPLY STRING_SPLIT(toppings,',')
 
-        CREATE VIEW pizza AS
-            SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
-            FROM pizza_names n
-            LEFT JOIN pizza_recipes r
-            ON r.pizza_id = n.pizza_id
-            LEFT JOIN pizza_toppings_pivoted pp
-            ON pp.pizza_id = n.pizza_id
-            LEFT JOIN pizza_toppings pt
-            ON pt.topping_id = pp.topping_id
+        -- CREATE VIEW pizza AS
+        --     SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
+        --     FROM pizza_names n
+        --     LEFT JOIN pizza_recipes r
+        --     ON r.pizza_id = n.pizza_id
+        --     LEFT JOIN pizza_toppings_pivoted pp
+        --     ON pp.pizza_id = n.pizza_id
+        --     LEFT JOIN pizza_toppings pt
+        --     ON pt.topping_id = pp.topping_id
 
-        SELECT * FROM Orders
+        -- SELECT * FROM Orders
 
     
     -- 1. What are the standard ingredients for each pizza?
@@ -815,8 +812,8 @@
         -- Create Table
             -- CREATE TABLE Runner_Ratings (
             --     Order_id INTEGER,
-            --     Rating INTEGER
-            )
+            --     Rating INTEGER)
+            
         -- Insert Values
             -- INSERT INTO Runner_Ratings ("Order_id", "Rating")
             -- VALUES 
