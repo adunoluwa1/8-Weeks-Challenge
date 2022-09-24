@@ -256,7 +256,7 @@
                                            AS [Number of Orders]
             FROM pizza_names p
 
-    -- 6. What was the maximum number of pizzas delivered in a single order? VIEW CREATINON
+    -- 6. What was the maximum number of pizzas delivered in a single order? VIEW CREATION
         -- Using Group By
             SELECT q.order_id, q.[Number of Pizzas]
             FROM
@@ -711,8 +711,30 @@
                      ON n.pizza_id = o.pizza_id) subquery
 
         
-    -- 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
+    -- 5. ***Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
         -- For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
+            SELECT o.order_id, n.pizza_name, 
+            (SELECT STRING_AGG(t.topping_name,', ')
+                FROM exclusions_view e
+                LEFT JOIN pizza_toppings t
+                ON e.exclusions_id = t.topping_id
+                WHERE e.order_id = o.order_id
+                AND o.exclusions IS NOT NULL) AS Exclusions,
+            (SELECT STRING_AGG(t.topping_name,', ')
+                FROM extras_view x
+                LEFT JOIN pizza_toppings t
+                ON x.extras_id = t.topping_id
+                WHERE x.order_id = o.order_id
+                AND o.extras IS NOT NULL) AS Extras,
+            (SELECT STRING_AGG(p.topping_name,', ')
+                FROM pizza p
+                WHERE p.pizza_id = o.pizza_id) AS recipe 
+            FROM Orders o
+            LEFT JOIN pizza_names n
+            ON n.pizza_id = o.pizza_id
+            WHERE cancellation IS NULL
+
+
     -- 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
         -- Using all methods
            
@@ -737,3 +759,69 @@
                 WHERE cancellation IS NULL) sq
             ORDER BY [Total Quantity] DESC
 
+/*
+--          Q4.Pricing and Ratings              */
+    -- 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+        -- Total without grouping by pizza type 
+            SELECT SUM(s.Revenue)
+            FROM   
+                (SELECT CASE WHEN pizza_id = 1 THEN 12
+                            ELSE 10
+                       END AS Revenue
+                FROM Orders
+                WHERE cancellation IS NULL) s
+        -- Window functions and subqueries
+            SELECT DISTINCT s.pizza_name Pizza, SUM(s.Price) OVER(PARTITION BY s.pizza_name) AS Revenue
+            FROM
+                (SELECT p.pizza_name, 
+                       CASE WHEN o.pizza_id = 1 THEN 12 
+                            ELSE 10
+                        END AS Price
+                FROM Orders o
+                LEFT JOIN pizza_names p
+                ON p.pizza_id = o.pizza_id
+                WHERE cancellation IS NULL) s
+            ORDER BY Revenue DESC
+        
+        -- Correlated subqueries with Case stements
+            SELECT DISTINCT pizza_name, 
+                   CASE WHEN p.pizza_id = 1 THEN (SELECT COUNT(*) FROM Orders o2 
+                                                  WHERE o.pizza_id = o2.pizza_id AND o2.cancellation IS NULL) * 12
+                                            ELSE (SELECT COUNT(*) FROM Orders o2 
+                                                  WHERE o.pizza_id = o2.pizza_id AND o2.cancellation IS NULL) * 10
+                   END AS Revenue
+            FROM Orders o
+            LEFT JOIN pizza_names p
+            ON p.pizza_id = o.pizza_id
+            ORDER BY Revenue DESC
+            
+
+    -- 2. What if there was an additional $1 charge for any pizza extras?
+        -- Add cheese is $1 extra
+        -- Using window functions and subqueries            
+            SELECT SUM(s.Price + s.Extra) AS [Revenue with extra charges]
+            FROM    
+                (SELECT o.order_id,
+                       CASE WHEN o.pizza_id = 1 THEN 12 
+                            ELSE 10
+                       END AS Price,
+                       (SELECT COUNT(*)
+                       FROM extras_view x
+                       WHERE o.order_id = x.order_id
+                       AND o.extras IS NOT NULL) AS Extra
+                FROM Orders o
+                WHERE cancellation IS NULL) s
+
+    -- 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+    -- 4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
+        -- customer_id
+        -- order_id
+        -- runner_id
+        -- rating
+        -- order_time
+        -- pickup_time
+        -- Time between order and pickup
+        -- Delivery duration
+        -- Average speed
+        -- Total number of pizzas
+    -- 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
