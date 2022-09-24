@@ -130,7 +130,6 @@
     SELECT * FROM pizza_recipes
     SELECT * FROM pizza_toppings
 
-
 /*
 --          Data Cleanup                        */
     -- Customer Orders Table
@@ -813,15 +812,48 @@
                 WHERE cancellation IS NULL) s
 
     -- 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+        -- Create Table
+            -- CREATE TABLE Runner_Ratings (
+            --     Order_id INTEGER,
+            --     Rating INTEGER
+            )
+        -- Insert Values
+            -- INSERT INTO Runner_Ratings ("Order_id", "Rating")
+            -- VALUES 
+            --     (1,2),
+            --     (2,4),
+            --     (3,3),
+            --     (4,2),
+            --     (5,4),
+            --     (7,5),
+            --     (8,5),
+            --     (10,5)
+
+
     -- 4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
-        -- customer_id
-        -- order_id
-        -- runner_id
-        -- rating
-        -- order_time
-        -- pickup_time
-        -- Time between order and pickup
-        -- Delivery duration
-        -- Average speed
-        -- Total number of pizzas
+        SELECT DISTINCT o.customer_id,
+               o.order_id,
+               o.runner_id,
+               r.rating,
+               o.order_time,
+               o.pickup_time,
+               DATEDIFF(s, o.order_time, o.pickup_time)/60.0 AS [Time between order and pickup],
+               o.duration,
+               AVG(o.distance/(o.duration/60)) OVER(PARTITION BY o.order_id) AS [Average speed],
+               COUNT(*) OVER(PARTITION BY o.order_id) AS [Total number of pizzas]
+        -- INTO [Full Table]
+        FROM Orders o
+        LEFT JOIN Runner_Ratings r
+        ON r.Order_id = o.Order_id
+        WHERE cancellation IS NULL
+
     -- 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+            SELECT SUM(s.Revenue +s.[Delivery Charge]) AS [Total Revenue]
+            FROM     
+                (SELECT *, 
+                        CASE WHEN pizza_id = 1 THEN 12
+                            ELSE 10
+                        END AS Revenue,
+                        0.3 * distance AS [Delivery Charge]
+                FROM Orders
+                WHERE cancellation IS NULL) s
