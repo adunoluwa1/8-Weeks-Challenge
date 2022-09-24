@@ -132,6 +132,7 @@
 
 /*
 --          Data Cleanup                        */
+-- NB: Never edit DB tables directly, rather make duplicates and perform data cleaning
     -- Customer Orders Table
         UPDATE customer_orders
         SET exclusions = NULL
