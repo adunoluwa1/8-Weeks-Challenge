@@ -256,7 +256,7 @@
                                            AS [Number of Orders]
             FROM pizza_names p
 
-    -- 6. What was the maximum number of pizzas delivered in a single order?
+    -- 6. What was the maximum number of pizzas delivered in a single order? VIEW CREATINON
         -- Using Group By
             SELECT q.order_id, q.[Number of Pizzas]
             FROM
@@ -283,12 +283,15 @@
             WHERE q.Ranking = 1
 
         -- Using Subqueries in WHERE clause & Order view
+
+            -- DROP VIEW Orders
             CREATE VIEW Orders AS 
                 SELECT c.order_id,
                     c.customer_id,
                     c.pizza_id,
                     c.order_time,
                     c.exclusions,
+                    c.extras,
                     r.runner_id,
                     r.pickup_time,
                     r.distance,
@@ -586,39 +589,133 @@
     -- 2. What was the most commonly added extra?
         -- Using CTE
             WITH extras_cte AS
-                (SELECT order_id, TRIM([value]) AS extras 
+                (SELECT order_id, TRIM([value]) AS extras_id, extras
                 FROM customer_orders
                 CROSS APPLY string_split(extras,',')
                 WHERE extras IS NOT NULL)
 
-            SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered]
-            FROM extras_cte s
-            LEFT JOIN pizza_toppings t
-            ON t.topping_id = s.extras
-            GROUP BY topping_name
+            SELECT sq.Extras, sq.[Times Ordered]
+            FROM    
+                (SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered],
+                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
+                FROM extras_cte s
+                LEFT JOIN pizza_toppings t
+                ON t.topping_id = s.extras_id
+                GROUP BY topping_name) sq
+            WHERE sq.Rank = 1;
 
         -- Using subquery
-            SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered]
-            FROM (SELECT order_id, TRIM([value]) AS extras 
-                 FROM customer_orders
-                 CROSS APPLY string_split(extras,',')
-                 WHERE extras IS NOT NULL) s
-            LEFT JOIN pizza_toppings t
-            ON t.topping_id = s.extras
-            GROUP BY topping_name
+            SELECT sq.Extras, sq.[Times Ordered]    
+            FROM    
+                (SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered],
+                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
+                FROM (SELECT order_id, TRIM([value]) AS extras 
+                     FROM customer_orders
+                     CROSS APPLY string_split(extras,',')
+                     WHERE extras IS NOT NULL) s
+                LEFT JOIN pizza_toppings t
+                ON t.topping_id = s.extras
+                GROUP BY topping_name) sq
+            WHERE sq.Rank = 1;
 
-        -- Using correlated subqueries
-            
+        -- Alternatively - difficult to read
+            SELECT sq.topping_name, sq.[Times Ordered]
+            FROM
+                (SELECT topping_name, COUNT(order_id) AS [Times Ordered],
+                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
+                FROM customer_orders
+                CROSS APPLY string_split(extras,',')
+                LEFT JOIN pizza_toppings t
+                ON t.topping_id = TRIM([value])
+                WHERE extras IS NOT NULL
+                GROUP BY topping_name) sq
+            WHERE sq.Rank = 1;     
+                 
 
     -- 3. What was the most common exclusion? 
-        --
-        --
+        -- Using CTE
+            WITH exclusions_cte AS (
+                SELECT order_id, TRIM([value]) AS exclusion
+                FROM customer_orders
+                CROSS APPLY string_split(exclusions,',')
+                WHERE exclusions IS NOT NULL)
+                
+            SELECT sq.exclusion, sq.[Times Ordered]
+            FROM 
+                (SELECT t.topping_name AS exclusion, COUNT(*) AS [Times Ordered],
+                ROW_NUMBER() OVER(ORDER BY COUNT(*) DESC) AS Rank
+                FROM exclusions_cte e
+                LEFT JOIN pizza_toppings t
+                ON e.exclusion = t.topping_id
+                GROUP BY topping_name) sq
+            WHERE sq.Rank = 1;
+            
+        -- Using subqueries
+            SELECT sq.exclusion, sq.[Times Ordered]
+            FROM 
+                (SELECT t.topping_name AS exclusion, COUNT(*) AS [Times Ordered],
+                        ROW_NUMBER() OVER(ORDER BY COUNT(*) DESC) AS Rank
+                FROM (SELECT order_id, TRIM([value]) AS exclusion
+                     FROM customer_orders
+                     CROSS APPLY string_split(exclusions,',')
+                     WHERE exclusions IS NOT NULL) e
+                LEFT JOIN pizza_toppings t
+                ON e.exclusion = t.topping_id
+                GROUP BY topping_name) AS sq
+            WHERE sq.Rank = 1
+        
+
     -- 4. Generate an order item for each record in the customers_orders table in the format of one of the following:
         -- Meat Lovers
         -- Meat Lovers - Exclude Beef
         -- Meat Lovers - Extra Bacon
         -- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+
+        -- Creating extras and exclusions
+                -- CREATE VIEW extras_view AS
+                --      SELECT order_id, TRIM([value]) AS extras_id
+                --      FROM customer_orders
+                --      CROSS APPLY string_split(extras,',')
+                --      WHERE extras IS NOT NULL
+
+                -- CREATE VIEW exclusions_view AS 
+                --      SELECT DISTINCT order_id, TRIM([value]) AS exclusions_id
+                --      FROM customer_orders
+                --      CROSS APPLY string_split(exclusions,',')
+                --      WHERE exclusions IS NOT NULL
+
+                -- DROP VIEW exclusions_view
+                -- SELECT * FROM exclusions_view
+                -- SELECT * FROM extras_view
+                -- SELECT * FROM Orders
+                -- SELECT * FROM customer_orders
+        
+        -- Building the query using correlated subqueries, nested subqueries and string functions
+                SELECT CONCAT(pizza_name, IIF(exclusions IS NOT NULL,' - Exclude ','' ), ISNULL(exclusions,''),
+                 IIF(extras IS NOT NULL,' - Extra ','' ), ISNULL(extras,'')) AS [Order item]
+                FROM (SELECT  order_id, pizza_name, 
+                         (SELECT STRING_AGG(t.topping_name, ',')
+                                 FROM exclusions_view e
+                                 LEFT JOIN pizza_toppings t
+                                 ON t.topping_id = e.exclusions_id
+                                 WHERE e.order_id = o.order_id
+                                 AND o.exclusions IS NOT NULL) AS exclusions,
+                         (SELECT STRING_AGG(t.topping_name, ',')
+                                 FROM extras_view x
+                                 LEFT JOIN pizza_toppings t
+                                 ON t.topping_id = x.extras_id
+                                 WHERE x.order_id = o.order_id
+                                 AND o.extras IS NOT NULL) AS extras
+                     FROM customer_orders o
+                     LEFT JOIN pizza_names n
+                     ON n.pizza_id = o.pizza_id) subquery
+
+        
     -- 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
         -- For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
     -- 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
+        -- Using 
+            SELECT *
+            FROM Orders
+            WHERE cancellation IS NULL
 
