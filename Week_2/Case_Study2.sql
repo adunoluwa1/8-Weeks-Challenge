@@ -714,8 +714,26 @@
     -- 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
         -- For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
     -- 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
-        -- Using 
-            SELECT *
-            FROM Orders
-            WHERE cancellation IS NULL
+        -- Using all methods
+           
+            SELECT sq.topping_name Topping, sq.Quantity + sq.Extras - sq.Exclusions AS [Total Quantity]
+            FROM
+                (SELECT DISTINCT t.topping_name, count(*) OVER(PARTITION BY t.topping_name) AS [Quantity], 
+                    (SELECT COUNT(*)
+                        FROM extras_view x
+                        LEFT JOIN pizza_toppings t1
+                        ON x.extras_id = t1.topping_id
+                        WHERE t.topping_name = t1.topping_name) AS [Extras],
+                    (SELECT COUNT(*)
+                        FROM exclusions_view e
+                        LEFT JOIN pizza_toppings t2
+                        ON e.exclusions_id = t2.topping_id
+                        WHERE t.topping_name = t2.topping_name) AS [Exclusions]
+                FROM Orders o
+                LEFT JOIN pizza_toppings_pivoted pp
+                ON pp.pizza_id = o.pizza_id
+                LEFT JOIN pizza_toppings t
+                ON t.topping_id = PP.topping_id
+                WHERE cancellation IS NULL) sq
+            ORDER BY [Total Quantity] DESC
 
