@@ -848,7 +848,7 @@
         WHERE cancellation IS NULL
 
     -- 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
-            SELECT SUM(s.Revenue +s.[Delivery Charge]) AS [Total Revenue]
+            SELECT SUM(s.Revenue + s.[Delivery Charge]) AS [Total Revenue]
             FROM     
                 (SELECT *, 
                         CASE WHEN pizza_id = 1 THEN 12
