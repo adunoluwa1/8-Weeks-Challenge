@@ -583,8 +583,8 @@
     -- 1. What are the standard ingredients for each pizza?
             SELECT DISTINCT pizza_name, STRING_AGG(topping_name,',') AS [Standard Ingredients]
             FROM pizza
-            GROUP BY pizza_name
-            
+            GROUP BY pizza_name;
+
     -- 2. What was the most commonly added extra?
         -- Using CTE
             WITH extras_cte AS
