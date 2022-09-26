@@ -202,9 +202,9 @@
             WHERE cancellation IS NULL
 
         -- Using correlated subqueries
-            SELECT DISTINCT runner_id, (SELECT COUNT(*)
-                               FROM runner_orders ro
-                               WHERE ro.runner_id = r.runner_id AND ro.cancellation IS NULL)  AS [Successful Orders]
+            SELECT DISTINCT r.runner_id, (SELECT COUNT(*)
+                                        FROM runner_orders ro
+                                        WHERE ro.runner_id = r.runner_id AND ro.cancellation IS NULL)  AS [Successful Orders]
             FROM runner_orders r
     
     -- 4. How many of each type of pizza was delivered?
@@ -316,7 +316,7 @@
 
     -- 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
         -- Using Group By
-            SELECT DISTINCT c.customer_id, COUNT(*) AS [One Change]
+            SELECT DISTINCT c.customer_id, COUNT(*) AS [One Change] 
             FROM customer_orders c
             LEFT JOIN runner_orders r
             ON c.order_id = r.order_id
@@ -581,8 +581,10 @@
 
     
     -- 1. What are the standard ingredients for each pizza?
-            SELECT DISTINCT pizza_name, topping_name
+            SELECT DISTINCT pizza_name, STRING_AGG(topping_name,',') AS [Standard Ingredients]
             FROM pizza
+            GROUP BY pizza_name
+            
     -- 2. What was the most commonly added extra?
         -- Using CTE
             WITH extras_cte AS
