@@ -2790,25 +2790,68 @@
 
     -- 6. What is the number and percentage of customer plans after their initial free trial?
     -- 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
-            SELECT *
-            FROM subscriptions r
-            INNER JOIN             
-                (SELECT customer_id --, plan_id, start_date
-                FROM subscriptions
-                WHERE start_date < '2020-12-31'
-                AND customer_id NOT IN (SELECT s.customer_id
-                                        FROM subscriptions s
-                                        WHERE start_date < '2020-12-31'
-                                        AND start_date = (SELECT MAX(q.start_date)
-                                                            FROM subscriptions q
-                                                            WHERE s.customer_id = q.customer_id
-                                                            AND q.plan_id = 4)) 
-                GROUP BY customer_id) sq
-            ON sq.customer_id = r.customer_id
-    
-
-SELECT MAX(start_date) FROM subscriptions
+        -- Multiple methods
+            WITH churn AS
+                    (SELECT *
+                     FROM
+                        (SELECT *,
+                            CASE WHEN  (SELECT MAX(plan_id)
+                                        FROM subscriptions q
+                                        WHERE s.customer_id = q.customer_id) = 4 THEN 'Y'
+                            ELSE 'N' END AS Churned
+                        FROM              
+                            (SELECT *
+                             FROM subscriptions
+                             WHERE start_date < '2020-12-31') s) sq
+                     WHERE sq.Churned = 'N'),
+                Total AS
+                    (SELECT COUNT(DISTINCT customer_id) AS #Total 
+                     FROM churn),
+                Final AS
+                    (SELECT sq.last_plan, COUNT(*) AS #Customers
+                     FROM 
+                         (SELECT DISTINCT customer_id, 
+                                (SELECT plan_id 
+                                 FROM churn x 
+                                 WHERE x.customer_id = c.customer_id 
+                                 AND x.start_date = (SELECT MAX(start_date) 
+                                                     FROM churn y 
+                                                     WHERE c.customer_id = y.customer_id )) AS [last_plan]
+                         FROM churn c) sq, Total
+                     GROUP BY sq.last_plan)
+            --
+            SELECT last_plan, CAST((#Customers*100.0)/#Total AS DEC(10,1)) AS [%Customers]
+            FROM Final, Total
+               
     -- 8. How many customers have upgraded to an annual plan in 2020?
+            SELECT COUNT(*) AS #Upgraded
+            FROM subscriptions
+            WHERE DATEPART(yy,start_date) = 2020 AND plan_id = 3
+
     -- 9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
+        -- Using correlated subqueries
+            SELECT AVG(DATEDIFF(dd,sq.#joindate,sq.#upgradedate)) AS [Average Upgrade Time]
+            FROM    
+                (SELECT s.customer_id,
+                (SELECT q.start_date FROM subscriptions q WHERE q.plan_id = 0 AND s.customer_id = q.customer_id) AS #joindate,
+                (SELECT r.start_date FROM subscriptions r WHERE r.plan_id = 3 AND s.customer_id = r.customer_id) AS #upgradedate 
+                FROM subscriptions s
+                WHERE s.plan_id = 3) sq
+            
+        -- Using subqueries
+            SELECT AVG(DATEDIFF(dd,sq1.#joindate,sq2.#upgradedate)) AS [Average Upgrade Time]
+            FROM                
+                (SELECT customer_id, start_date AS #joindate
+                FROM subscriptions
+                WHERE plan_id = 0) sq1
+            INNER JOIN
+                (SELECT customer_id, start_date AS #upgradedate 
+                FROM subscriptions
+                WHERE plan_id = 3) sq2
+            ON sq1.customer_id = sq2.customer_id
+
     -- 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
     -- 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
+
+-- 
+/*          Data Analysis Questions          */
