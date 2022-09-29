@@ -2790,17 +2790,21 @@
 
     -- 6. What is the number and percentage of customer plans after their initial free trial?
     -- 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
-            SELECT customer_id, plan_id, start_date
-            FROM subscriptions
-            WHERE start_date < '2020-12-31'
-            AND customer_id NOT IN (SELECT s.customer_id
-                                    FROM subscriptions s
-                                    WHERE start_date < '2020-12-31'
-                                    AND start_date = (SELECT MAX(q.start_date)
-                                                        FROM subscriptions q
-                                                        WHERE s.customer_id = q.customer_id
-                                                        AND q.plan_id = 4))
-            GROUP BY customer_id, plan_id
+            SELECT *
+            FROM subscriptions r
+            INNER JOIN             
+                (SELECT customer_id --, plan_id, start_date
+                FROM subscriptions
+                WHERE start_date < '2020-12-31'
+                AND customer_id NOT IN (SELECT s.customer_id
+                                        FROM subscriptions s
+                                        WHERE start_date < '2020-12-31'
+                                        AND start_date = (SELECT MAX(q.start_date)
+                                                            FROM subscriptions q
+                                                            WHERE s.customer_id = q.customer_id
+                                                            AND q.plan_id = 4)) 
+                GROUP BY customer_id) sq
+            ON sq.customer_id = r.customer_id
     
 
 SELECT MAX(start_date) FROM subscriptions
