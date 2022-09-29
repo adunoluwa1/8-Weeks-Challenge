@@ -2851,6 +2851,28 @@
             ON sq1.customer_id = sq2.customer_id
 
     -- 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
+        -- 
+            SELECT Periods, COUNT(*) AS #Customers,AVG(DATEDIFF(dd,sq1.#joindate,sq1.#upgradedate)) AS [Average Upgrade Time]
+            FROM
+                (SELECT *,
+                        CASE 
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 30 THEN '0-30 days'
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 60 THEN '30-60 days'
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 90 THEN '60-90 days'
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 120 THEN '90-120 days'
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 150 THEN '120-150 days'
+                            WHEN DATEDIFF(dd,sq.#joindate,sq.#upgradedate) <= 180 THEN '150-180 days'
+                            ELSE'180+ days'
+                        END AS Periods
+                FROM    
+                    (SELECT s.customer_id,
+                    (SELECT q.start_date FROM subscriptions q WHERE q.plan_id = 0 AND s.customer_id = q.customer_id) AS #joindate,
+                    (SELECT r.start_date FROM subscriptions r WHERE r.plan_id = 3 AND s.customer_id = r.customer_id) AS #upgradedate 
+                    FROM subscriptions s
+                    WHERE s.plan_id = 3) sq) sq1
+            GROUP BY Periods
+
+            --
     -- 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
 
 -- 
