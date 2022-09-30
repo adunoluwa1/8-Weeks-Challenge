@@ -2874,6 +2874,21 @@
 
             --
     -- 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
+            SELECT COUNT(*) #Customers
+            FROM
+                (SELECT DISTINCT s.customer_id,
+                    (SELECT q.start_date FROM subscriptions q WHERE q.plan_id = 2 AND s.customer_id = q.customer_id) AS pro_subdate,
+                    (SELECT r.start_date FROM subscriptions r WHERE r.plan_id = 1 AND s.customer_id = r.customer_id) AS basic_subdate
+                FROM subscriptions s) sq
+            WHERE sq.pro_subdate IS NOT NULL AND sq.basic_subdate IS NOT NULL AND DATEPART(yy,basic_subdate) = 2020 AND Pro_subdate < basic_subdate 
+
 
 -- 
-/*          Data Analysis Questions          */
+/*          Challenge Payment Question          */
+-- The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer
+-- in the subscriptions table with the following requirements:
+    SELECT customer_id, s.plan_id, plan_name, start_date, price 
+    FROM subscriptions s
+    LEFT JOIN plans p
+    ON s.plan_id = p.plan_id
+    WHERE s.plan_id <> 0 
