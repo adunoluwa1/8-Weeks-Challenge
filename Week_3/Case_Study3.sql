@@ -2887,8 +2887,8 @@
 /*          Challenge Payment Question          */
 -- The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer
 -- in the subscriptions table with the following requirements:
-    SELECT customer_id, s.plan_id, plan_name, start_date, price 
-    FROM subscriptions s
-    LEFT JOIN plans p
-    ON s.plan_id = p.plan_id
-    WHERE s.plan_id <> 0 
+        SELECT customer_id, s.plan_id, plan_name, start_date, price 
+        FROM subscriptions s
+        LEFT JOIN plans p
+        ON s.plan_id = p.plan_id
+        WHERE s.plan_id <> 0 
