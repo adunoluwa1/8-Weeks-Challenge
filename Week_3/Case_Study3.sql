@@ -2966,11 +2966,12 @@
 
             SELECT customer_id, t.plan_id, p.plan_name, p_date [payment_date], p.price [amount],
                    ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY p_date) AS payment_ord
-            INTO test_table
+            -- INTO test_table
             FROM test_cte t
             LEFT JOIN plans p
             ON t.plan_id = p.plan_id
             ORDER BY customer_id, plan_id, p_date
 
-    -- 
+    --  
+        SELECT * FROM TEST_TABLE
 
