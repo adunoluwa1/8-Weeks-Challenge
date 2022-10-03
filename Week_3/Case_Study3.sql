@@ -2789,6 +2789,41 @@
                 WHERE s1.plan_id = 0 AND DATEADD(d,-7,s2.last_plan) = s1.start_date) sq
 
     -- 6. What is the number and percentage of customer plans after their initial free trial?
+        -- Using Group BY
+            WITH 
+                customers AS(
+                    SELECT plan_id, COUNT(*) AS #customers
+                    FROM 
+                        (SELECT *, RANK() OVER(PARTITION BY customer_id ORDER BY start_date) AS Rank
+                        FROM subscriptions) sq
+                    WHERE sq.Rank = 2
+                    GROUP BY plan_id),
+                Total AS(
+                    SELECT COUNT(DISTINCT customer_id) AS #Total FROM subscriptions)
+            
+            SELECT plan_name, #customers, CAST((#customers * 100.0)/#Total AS DEC(10,2)) AS [%customers]
+            FROM Total, customers c
+            LEFT JOIN plans p
+            ON c.plan_id = p.plan_id
+            ORDER BY p.plan_name
+        
+        -- Using correlated subqueries
+            SELECT plan_id, #customers, CAST((#customers * 100.0)/q.#total AS DEC(10,2)) AS [%customers]
+            FROM
+                (SELECT  DISTINCT plan_id, 
+                    (SELECT COUNT(*)
+                        FROM subscriptions s1
+                        WHERE s.plan_id = s1.plan_id
+                        AND s1.start_date = (SELECT MIN(start_date)
+                                            FROM subscriptions sq
+                                            WHERE s1.customer_id = sq.customer_id
+                                            AND sq.plan_id <> 0)) AS #customers,
+                    (SELECT COUNT(DISTINCT s2.customer_id)
+                        FROM subscriptions s2) AS #total
+                FROM subscriptions s
+                WHERE plan_id <> 0) q
+
+ 
     -- 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
         -- Multiple methods
             WITH churn AS
@@ -2885,54 +2920,57 @@
 
 -- 
 /*          Challenge Payment Question          */
--- The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer
--- in the subscriptions table with the following requirements:
+    -- The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table
 
-    -- CREATE VIEW Q3 AS
-        -- SELECT customer_id, s.plan_id, plan_name, start_date, price, 
-        -- ROW_NUMBER() OVER(PARTITION BY s.customer_id ORDER BY start_date) AS Rank
-        -- FROM subscriptions s
-        -- LEFT JOIN plans p
-        -- ON s.plan_id = p.plan_id
-        -- WHERE s.plan_id <> 0  AND DATEPART(yy,s.start_date) = 2020 
-        -- AND customer_id NOT IN (SELECT s1.customer_id
-        --                         FROM subscriptions s1
-        --                         WHERE start_date = (SELECT MAX(start_date)
-        --                                             FROM subscriptions s2
-        --                                             WHERE s1.customer_id = s2.customer_id)
-        --                         AND s1.plan_id = 4)
+        -- CREATE VIEW Q3 AS
+            -- SELECT customer_id, s.plan_id, plan_name, start_date, price, 
+            -- ROW_NUMBER() OVER(PARTITION BY s.customer_id ORDER BY start_date) AS Rank
+            -- FROM subscriptions s
+            -- LEFT JOIN plans p
+            -- ON s.plan_id = p.plan_id
+            -- WHERE s.plan_id <> 0  AND DATEPART(yy,s.start_date) = 2020 
+            -- AND customer_id NOT IN (SELECT s1.customer_id
+            --                         FROM subscriptions s1
+            --                         WHERE start_date = (SELECT MAX(start_date)
+            --                                             FROM subscriptions s2
+            --                                             WHERE s1.customer_id = s2.customer_id)
+            --                         AND s1.plan_id = 4)
 
-        -- DROP VIEW Q3
-                           
-        SELECT * FROM Q3;
+            -- DROP VIEW Q3
 
-    -- Using Recursive CTEs
-        WITH test_cte AS(
-            SELECT q.customer_id,
-                   q.plan_id,
-                   q.start_date AS p_date,
-                   q.rank
-            FROM Q3 q
+            SELECT * FROM Q3;
 
-            UNION ALL
+        -- Using Recursive CTEs ***
+            WITH test_cte AS(
+                SELECT q.customer_id,
+                       q.plan_id,
+                       q.start_date AS p_date,
+                       q.rank
+                FROM Q3 q
 
-            SELECT q.customer_id, q.plan_id, q.p_date, q.rank
-            FROM
-                (SELECT s.customer_id,
-                       s.plan_id,
-                       CASE WHEN s.plan_id IN (1,2) THEN DATEADD(mm,1,p_date)
-                            ELSE DATEADD(yy,1,p_date) END AS p_date,
-                       s.rank
-                FROM  test_cte s) q
-            WHERE p_date < ISNULL((SELECT s2.start_date
-                                                 FROM Q3 s2
-                                                 WHERE q.customer_id = s2.customer_id 
-                                                 AND S2.rank = q.rank + 1),'2020-12-31')
-        )
+                UNION ALL
 
-        SELECT customer_id, t.plan_id, p.plan_name, p_date [payment_date], p.price [amount],
-               ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY p_date) AS payment_ord
-        FROM test_cte t
-        LEFT JOIN plans p
-        ON t.plan_id = p.plan_id
-        ORDER BY customer_id, plan_id, p_date
+                SELECT q.customer_id, q.plan_id, q.p_date, q.rank
+                FROM
+                    (SELECT s.customer_id,
+                           s.plan_id,
+                           CASE WHEN s.plan_id IN (1,2) THEN DATEADD(mm,1,p_date)
+                                ELSE DATEADD(yy,1,p_date) END AS p_date,
+                           s.rank
+                    FROM  test_cte s) q
+                WHERE p_date < ISNULL((SELECT s2.start_date
+                                                     FROM Q3 s2
+                                                     WHERE q.customer_id = s2.customer_id 
+                                                     AND S2.rank = q.rank + 1),'2020-12-31')
+            )
+
+            SELECT customer_id, t.plan_id, p.plan_name, p_date [payment_date], p.price [amount],
+                   ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY p_date) AS payment_ord
+            INTO test_table
+            FROM test_cte t
+            LEFT JOIN plans p
+            ON t.plan_id = p.plan_id
+            ORDER BY customer_id, plan_id, p_date
+
+    -- 
+
