@@ -2904,9 +2904,6 @@
 
         -- DROP VIEW Q3
                            
-
-
-
         SELECT * FROM Q3;
 
     -- Using Recursive CTEs
