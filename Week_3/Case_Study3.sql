@@ -2964,14 +2964,23 @@
                                                      AND S2.rank = q.rank + 1),'2020-12-31')
             )
 
-            SELECT customer_id, t.plan_id, p.plan_name, p_date [payment_date], p.price [amount],
-                   ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY p_date) AS payment_ord
-            -- INTO test_table
-            FROM test_cte t
-            LEFT JOIN plans p
-            ON t.plan_id = p.plan_id
-            ORDER BY customer_id, plan_id, p_date
+              SELECT customer_id, plan_id, plan_name, payment_date, 
+                     CASE WHEN amount <> prev_payment AND payment_date <> DATEADD(mm,1,prev_date) THEN amount - prev_payment
+                          ELSE amount
+                     END AS p_amount,
+                     payment_ord
+            --   INTO test_table
+              FROM
+                     (SELECT customer_id, t.plan_id, p.plan_name, p_date [payment_date], p.price [amount],
+                            LAG(p.price) OVER(PARTITION BY customer_id ORDER BY p_date) AS [prev_payment],
+                            LAG(p_date) OVER(PARTITION BY customer_id ORDER BY p_date) AS [prev_date],
+                            ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY p_date) AS payment_ord
+                     FROM test_cte t
+                     LEFT JOIN plans p
+                     ON t.plan_id = p.plan_id) sq
+              ORDER BY customer_id, plan_id, payment_date
 
     --  
         SELECT * FROM TEST_TABLE
+        -- DROP TABLE TEST_TABLE
 
