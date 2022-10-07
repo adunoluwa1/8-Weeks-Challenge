@@ -9502,4 +9502,43 @@ SELECT COUNT(*) FROM regions
                                  WHERE r.region_id = c.region_id) AS #Customers
             FROM regions r
     -- How many days on average are customers reallocated to a different node?
+        -- Using Window functions    
+            SELECT AVG(DATEDIFF(D, #prev_date, #start_date)) [Avg Reallocation Time (days)]
+            FROM 
+                (SELECT customer_id, node_id, #start_date,
+                        LAG(#start_date) OVER(PARTITION BY customer_id ORDER BY #start_date) #prev_date
+                FROM
+                    (SELECT DISTINCT customer_id, node_id, 
+                            FIRST_VALUE(start_date) OVER(PARTITION BY customer_id, node_id ORDER BY customer_id, node_id, start_date) #start_date
+                    FROM customer_nodes) s) q
+            WHERE #prev_date IS NOT NULL
+
+        -- Using correlated subqueries
+            -- One method
+                SELECT AVG(DATEDIFF(D,prev_date,start_date)) [Avg Reallocation Time (days)]
+                FROM
+                    (SELECT *,
+                    LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
+                    FROM
+                        (SELECT DISTINCT customer_id, node_id,
+                                (SELECT MIN(start_date)
+                                FROM customer_nodes c1
+                                WHERE c.customer_id = c1.customer_id
+                                AND c.node_id = c1.node_id) AS start_date
+                        FROM customer_nodes c) s)q
+                WHERE prev_date IS NOT NULL
+
+            -- Another method
+                SELECT AVG(DATEDIFF(D,prev_date,start_date)) [Avg Reallocation Time (days)]
+                FROM
+                    (SELECT customer_id, node_id, start_date, prev_date
+                    FROM
+                        (SELECT DISTINCT customer_id, node_id, start_date, LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
+                        FROM customer_nodes c
+                        WHERE start_date = (SELECT MIN(start_date)
+                                            FROM customer_nodes c1
+                                            WHERE c.customer_id = c1.customer_id
+                                            AND c.node_id = c1.node_id)) s
+                    WHERE prev_date IS NOT NULL) sq
+
     -- What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
