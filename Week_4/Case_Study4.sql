@@ -9669,7 +9669,8 @@
             -- 
             SELECT *, (Deposit - Withdrawal - Purchases) Balance
             FROM CTE; 
-    -- What is the percentage of customers who increase their closing balance by more than 5%? which month
+    -- What is the percentage of customers who increase their closing balance by more than 5%? 
+        -- which month???
 
 --
 /*          Data Allocation Challenge                    */ 
@@ -9686,7 +9687,7 @@
     -- Q3 minimum, average and maximum values of the running balance for each customer
     -- Using all of the data available - how much data would have been required for each option on a monthly basis?
 
-        -- CREATE VIEW Test AS
+        -- CREATE VIEW Extra AS
             WITH Q1 AS
                 (SELECT DISTINCT c.customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) Months, 
                     ISNULL(deposit,0) Deposit, ISNULL(withdrawal,0) Withdrawal, ISNULL(purchases,0) Purchases
@@ -9717,4 +9718,8 @@
                     FROM Q1) Q2) Q3
 
 
-        -- Running customer balance total
+
+--
+/*          Extra Challenge                              */
+    -- interest calculation 6%
+        SELECT * FROM Extra
