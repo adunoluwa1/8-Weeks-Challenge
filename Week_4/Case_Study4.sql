@@ -1,7 +1,7 @@
-/*          DB Creation                      */
+/*          DB Creation                                  */
     -- CREATE DATABASE data_bank;
 --
-/*          Table Creation                   */
+/*          Table Creation                               */
     -- Regions 
         -- CREATE TABLE regions (
         --   region_id INTEGER,
@@ -9451,7 +9451,6 @@
         --   ('189', '2020-01-22', 'deposit', '302'),
         --   ('189', '2020-01-27', 'withdrawal', '861');
 --
-SELECT COUNT(*) FROM regions
 /*          Customer Nodes Exploration                   */
     -- How many unique nodes are there on the Data Bank system?
         SELECT COUNT(DISTINCT node_id) AS Nodes
@@ -9542,3 +9541,180 @@ SELECT COUNT(*) FROM regions
                     WHERE prev_date IS NOT NULL) sq
 
     -- What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
+        -- Creating View
+                -- CREATE VIEW reallocation_days AS (
+                --     SELECT DATEDIFF(D,prev_date,start_date) r_time
+                --     FROM
+                --         (SELECT *,
+                --         LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
+                --         FROM
+                --             (SELECT DISTINCT customer_id, node_id,
+                --                     (SELECT MIN(start_date)
+                --                     FROM customer_nodes c1
+                --                     WHERE c.customer_id = c1.customer_id
+                --                     AND c.node_id = c1.node_id) AS start_date
+                --             FROM customer_nodes c) s)q
+                --     WHERE prev_date IS NOT NULL
+                -- )
+            --
+        -- Median
+            SELECT r_time AS Median
+            FROM
+                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
+                FROM reallocation_days) sq2
+            WHERE rank = (SELECT (COUNT(*) + 1)/2 FROM reallocation_days)
+
+        -- 80th Percentile
+            SELECT r_time AS [80th Percentile]
+            FROM
+                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
+                FROM reallocation_days) sq2
+            WHERE rank = (SELECT CAST((COUNT(*) * 0.8 + 1 ) AS INT) FROM reallocation_days)
+
+        -- 95th Percentile
+            SELECT r_time AS [80th Percentile]
+            FROM
+                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
+                FROM reallocation_days) sq2
+            WHERE rank = (SELECT CAST((COUNT(*) * 0.95) + 1 AS INT) FROM reallocation_days)
+    
+--
+/*          Customer Transactions                        */
+    -- What is the unique count and total amount for each transaction type?
+        -- Using Group By
+            SELECT txn_type, COUNT(customer_id) #transactions, SUM(txn_amount) #total_amount
+            FROM customer_transactions
+            GROUP BY txn_type
+            ORDER BY txn_type
+
+        -- Using correlated subquery
+            SELECT DISTINCT txn_type, 
+                   (SELECT COUNT(*) FROM customer_transactions c1 WHERE c.txn_type = c1.txn_type) #transactions,
+                   (SELECT SUM(txn_amount) FROM customer_transactions c2 WHERE c.txn_type = c2.txn_type) #total_amount
+            FROM customer_transactions c
+            ORDER BY txn_type
+        
+        -- Using Window functions
+            SELECT DISTINCT txn_type,
+                   COUNT(customer_id) OVER(PARTITION BY  txn_type) #transactions,
+                   SUM(txn_amount) OVER(PARTITION BY txn_type) #total_amount
+            FROM customer_transactions
+            ORDER BY txn_type
+
+    -- What is the average total historical deposit counts and amounts for all customers?
+        -- Using Group By
+            SELECT AVG(#tot_deposit_amount) Avg_deposit, AVG(#deposits) Num_deposits
+            FROM    
+                (SELECT customer_id, txn_type, SUM(txn_amount) #tot_deposit_amount, COUNT(*) #deposits 
+                FROM customer_transactions
+                WHERE txn_type = 'deposit'
+                GROUP BY customer_id, txn_type) sq
+        -- Using Window Functions
+            SELECT AVG(Total_deposit) Avg_deposit, AVG(#deposits) Num_deposits
+            FROM
+                (SELECT DISTINCT customer_id, 
+                       SUM(txn_amount) OVER(PARTITION BY customer_id) AS Total_deposit,
+                       COUNT(txn_amount) OVER(PARTITION BY customer_id) AS #deposits
+                FROM customer_transactions
+                WHERE txn_type = 'deposit') sq
+    -- For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?
+        SELECT Month, COUNT(DISTINCT customer_id) AS #customers
+        FROM 
+            (SELECT customer_id, DATEPART(mm,txn_date) M, DATENAME(mm,txn_date) Month,
+                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'deposit' AND c.customer_id = ct.customer_id ) #deposit,
+                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'withdrawal' AND c.customer_id = ct.customer_id) #withdrawal,
+                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'purchase' AND c.customer_id = ct.customer_id ) #purchase
+            FROM customer_transactions c) sq
+        WHERE #deposit > 1 AND (#purchase = 1 OR #withdrawal = 1)
+        GROUP BY Month;
+         
+    -- What is the closing balance for each customer at the end of the month?
+        -- Using Correlated subqueries
+            WITH sq AS
+                (SELECT DISTINCT customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) AS Month,
+                        (SELECT SUM(txn_amount) FROM customer_transactions c1 WHERE txn_type = 'deposit' 
+                            AND c.customer_id = c1.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c1.txn_date)) #deposits,
+                        (SELECT SUM(txn_amount) FROM customer_transactions c2 WHERE txn_type = 'withdrawal' 
+                            AND c.customer_id = c2.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c2.txn_date)) #withdrawal,
+                        (SELECT SUM(txn_amount) FROM customer_transactions c3 WHERE txn_type = 'purchase' 
+                            AND c.customer_id = c3.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c3.txn_date)) #purchase
+                FROM customer_transactions c) 
+            --
+            SELECT *
+            FROM
+                (SELECT customer_id, [Month], (ISNULL(#deposits,0) - (ISNULL(#withdrawal,0) + ISNULL(#purchase,0))) AS balance
+                FROM sq) q
+            WHERE balance IS NOT NULL;
+
+        -- Using Joins
+            WITH CTE AS
+                (SELECT DISTINCT c.customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) Months, 
+                    ISNULL(deposit,0) Deposit, ISNULL(withdrawal,0) Withdrawal, ISNULL(purchases,0) Purchases
+                FROM customer_transactions c
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) deposit
+                            FROM customer_transactions
+                            WHERE txn_type = 'deposit'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c1
+                ON c.customer_id = c1.customer_id AND DATEPART(MM,c.txn_date) = c1.M
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) withdrawal
+                            FROM customer_transactions
+                            WHERE txn_type = 'withdrawal'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c2
+                ON c.customer_id = c2.customer_id AND DATEPART(MM,c.txn_date) = c2.M
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) purchases
+                            FROM customer_transactions
+                            WHERE txn_type = 'purchase'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c3
+                ON c.customer_id = c3.customer_id AND DATEPART(MM,c.txn_date) = c3.M)
+            -- 
+            SELECT *, (Deposit - Withdrawal - Purchases) Balance
+            FROM CTE; 
+    -- What is the percentage of customers who increase their closing balance by more than 5%? which month
+
+--
+/*          Data Allocation Challenge                    */ 
+    -- To test out a few different hypotheses - the Data Bank team wants to run an experiment 
+    -- where different groups of customers would be allocated data using 3 different options:
+        -- Option 1: data is allocated based off the amount of money at the end of the previous month
+        -- Option 2: data is allocated on the average amount of money kept in the account in the previous 30 days
+        -- Option 3: data is updated real-time
+    -- For this multi-part challenge question - you have been requested to generate the following 
+    -- data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
+
+    -- Q1 customer balance at the end of each month
+    -- Q2 running customer balance column that includes the impact each transaction
+    -- Q3 minimum, average and maximum values of the running balance for each customer
+    -- Using all of the data available - how much data would have been required for each option on a monthly basis?
+
+        -- CREATE VIEW Test AS
+            WITH Q1 AS
+                (SELECT DISTINCT c.customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) Months, 
+                    ISNULL(deposit,0) Deposit, ISNULL(withdrawal,0) Withdrawal, ISNULL(purchases,0) Purchases
+                FROM customer_transactions c
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) deposit
+                            FROM customer_transactions
+                            WHERE txn_type = 'deposit'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c1
+                ON c.customer_id = c1.customer_id AND DATEPART(MM,c.txn_date) = c1.M
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) withdrawal
+                            FROM customer_transactions
+                            WHERE txn_type = 'withdrawal'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c2
+                ON c.customer_id = c2.customer_id AND DATEPART(MM,c.txn_date) = c2.M
+                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) purchases
+                            FROM customer_transactions
+                            WHERE txn_type = 'purchase'
+                            GROUP BY customer_id, DATEPART(MM,txn_date)) c3
+                ON c.customer_id = c3.customer_id AND DATEPART(MM,c.txn_date) = c3.M)
+            -- 
+            SELECT *, MIN(Running_Balance) OVER(PARTITION BY customer_id) AS Min_Running_Balance,
+                      MAX(Running_Balance) OVER(PARTITION BY customer_id) AS Max_Running_Balance,
+                      AVG(Running_Balance) OVER(PARTITION BY customer_id) AS Avg_Running_Balance
+            FROM
+                (SELECT *, SUM(Balance) OVER(PARTITION BY customer_id ORDER BY M) AS Running_Balance
+                FROM
+                    (SELECT *, (Deposit - Withdrawal - Purchases) Balance
+                    FROM Q1) Q2) Q3
+
+
+        -- Running customer balance total
