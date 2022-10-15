@@ -9723,3 +9723,4 @@
 /*          Extra Challenge                              */
     -- interest calculation 6%
         SELECT * FROM Extra
+        SELECT * FROM customer_transactions

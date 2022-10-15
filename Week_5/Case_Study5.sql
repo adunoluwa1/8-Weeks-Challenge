@@ -1,6 +1,6 @@
 /*              Create Database             */
     -- CREATE DATABASE data_mart;
-
+--
 /*              Create Tables               */
 
         -- DROP TABLE IF EXISTS weekly_sales;
@@ -17209,3 +17209,234 @@
         -- ('26/3/18', 'AFRICA', 'Retail', 'C3', 'Existing', '218516', '12083475');
 
 --
+/*              Data Cleaning               */
+    -- In a single query, perform the following operations and generate a new table in the data_mart schema named clean_weekly_sales:
+        -- Convert the week_date to a DATE format
+        -- Add a week_number as the second column for each week_date value, for example any value from the 1st of January to 7th of January will be 1, 8th to 14th will be 2 etc
+        -- Add a month_number with the calendar month for each week_date value as the 3rd column
+        -- Add a calendar_year column as the 4th column containing either 2018, 2019 or 2020 values
+        -- Add a new column called age_band after the original segment column using the following mapping on the number inside the segment value
+        --https://www.sqlshack.com/sql-server-functions-for-converting-string-to-date/#:~:text=In%20SQL%20Server%2C%20converting%20a%20string%20to%20date%20explicitly%20can,()%20and%20PARSE()%20functions.
+    -- Query            
+            SELECT wk_date,
+                   DATEPART(WK,wk_date) AS week_number,
+                   DATEPART(MM,wk_date) AS month_number,
+                   DATENAME(YYYY,wk_date) AS calender_year,
+                   region,
+                   platform,
+                   segment,
+                   CASE WHEN RIGHT(segment,1) = '1' THEN 'Young Adults'
+                        WHEN RIGHT(segment,1) = '2' THEN 'Middle Aged'
+                        WHEN RIGHT(segment,1) = '3' OR RIGHT(segment,1) = '4'  THEN 'Retirees'
+                        WHEN segment = 'null' THEN 'unknown'
+                        END AS age_band,
+                   CASE WHEN LEFT(segment,1) = 'C' THEN 'Couples'
+                        WHEN LEFT(segment,1) = 'F' THEN 'Families'
+                        WHEN segment = 'null' THEN 'unknown'
+                        END AS demographic,
+                   CAST(sales/transactions AS DEC(10,2)) AS avg_transaction,
+                   transactions,
+                   CAST(sales AS BIGINT) AS sales -- to remove wahala
+            -- INTO clean_weekly_sales
+            FROM   
+                (SELECT  PARSE(Week_date AS DATE USING 'AR-LB') AS wk_date, *
+                FROM weekly_sales) sq
+
+--
+/*              Data Exploration            */
+    -- What day of the week is used for each week_date value?
+        -- Window Functions
+            SELECT DISTINCT DATENAME(DW,wk_date) AS wk_day, COUNT(*) OVER(PARTITION BY DATENAME(DW,wk_date)) AS #transactions
+            FROM clean_weekly_sales
+            ORDER BY wk_day
+        -- Group By
+            SELECT DATENAME(DW,wk_date) AS wk_day, COUNT(*) AS #transactions
+            FROM clean_weekly_sales
+            GROUP BY  DATENAME(DW,wk_date)
+            ORDER BY wk_day
+    -- What range of week numbers are missing from the dataset?
+            --ALTER View instead of Replace View for SQL Server
+            -- CREATE OR ALTER VIEW weeks_temp AS
+            WITH all_wk_numbers AS(
+                SELECT CAST('2020-01-01' AS DATE) AS n, DATEPART(WK,'2020-01-01') AS wk
+                
+                UNION ALL
+                
+                SELECT n, DATEPART(WK,n) AS wk
+                FROM
+                    (SELECT DATEADD(WK,1,n) AS n
+                    FROM all_wk_numbers) q
+                WHERE n <= '2020-12-31')
+            
+            
+            SELECT DISTINCT STRING_AGG(wk,',') AS Weeks  FROM all_wk_numbers
+            WHERE wk NOT IN (SELECT DISTINCT week_number 
+                             FROM clean_weekly_sales)
+
+
+    -- How many total transactions were there for each year in the dataset?
+        -- Group By
+            SELECT calender_year, COUNT(*) AS #tranactions
+            FROM clean_weekly_sales
+            GROUP BY calender_year
+        
+        -- Window functions
+            SELECT DISTINCT calender_year, COUNT(*) OVER(PARTITION BY calender_year) AS #tranactions
+            FROM clean_weekly_sales
+        
+        -- Correlated subquery
+            SELECT DISTINCT calender_year, 
+                   (SELECT COUNT(*) 
+                    FROM clean_weekly_sales S
+                    WHERE C.calender_year = S.calender_year) AS #tranactions
+            FROM clean_weekly_sales c
+    
+
+    -- What is the total sales for each region for each month?
+        -- Group By
+            SELECT DISTINCT region, month_number,
+                SUM(CAST(sales AS BIGINT)) AS Total_sales
+            FROM (SELECT  DATENAME(MM,wk_date) AS Month, * FROM clean_weekly_sales) Q
+            GROUP BY ROLLUP(region, month_number)
+            ORDER BY Region, month_number
+
+        -- Window functions
+            SELECT DISTINCT month_number, DATENAME(MM,wk_date) AS Month, region,
+                SUM(CAST(sales AS BIGINT)) OVER(PARTITION BY month_number, region) AS Total_sales
+            FROM clean_weekly_sales
+            ORDER BY month_number, Region
+
+    -- What is the total count of transactions for each platform
+        -- Using Group By
+            SELECT platform, COUNT(*) AS #transactions
+            FROM clean_weekly_sales
+            GROUP BY platform
+
+        --Using Window Functions
+            SELECT DISTINCT platform, COUNT(*) OVER(PARTITION BY platform)  AS #transactions
+            FROM clean_weekly_sales
+
+        --Using Correlated subqueries
+            SELECT DISTINCT platform, (SELECT COUNT(*)
+                                       FROM clean_weekly_sales s
+                                       WHERE c.platform = s.platform) AS #transactions
+            FROM clean_weekly_sales c;
+    -- What is the percentage of sales for Retail vs Shopify for each month?
+        -- Using CTE 
+            WITH 
+                total_retail AS(
+                    SELECT SUM(sales) AS tot_retail
+                    FROM clean_weekly_sales
+                    WHERE platform = 'retail'),
+                total_shopify AS(
+                    SELECT SUM(sales) AS tot_shopify
+                    FROM clean_weekly_sales
+                    WHERE platform = 'shopify'),
+                total AS(
+                    SELECT SUM(sales) AS total
+                    FROM clean_weekly_sales)
+            --
+            SELECT CAST((tot_retail*100.0)/total AS DEC(10,1)) AS perc_retail, CAST((tot_shopify*100.0)/total AS DEC(10,1)) AS perc_shopify
+            FROM total_retail, total_shopify, total
+
+        -- Nested subqueries
+            SELECT CAST((tot_retail*100.0)/total AS DEC(10,1)) AS perc_retail, CAST((tot_shopify*100.0)/total AS DEC(10,1)) AS perc_retail
+            FROM
+                (SELECT DISTINCT
+                        (SELECT SUM(CAST(sales AS BIGINT))
+                        FROM clean_weekly_sales
+                        WHERE platform = 'retail') AS tot_retail,
+                        (SELECT SUM(CAST(sales AS BIGINT))
+                        FROM clean_weekly_sales
+                        WHERE platform = 'shopify') AS tot_shopify,
+                        (SELECT SUM(CAST(sales AS BIGINT))
+                        FROM clean_weekly_sales) AS total
+                FROM clean_weekly_sales) Q
+        -- Using Pivot
+            -- Derived table
+                -- initial query without months
+                    -- SELECT COALESCE(platform, 'total') AS platform, SUM(CAST(sales AS BIGINT)) AS Totals
+                    -- FROM clean_weekly_sales
+                    -- GROUP BY ROLLUP(platform)
+
+                -- final query with months
+                    SELECT COALESCE(platform,'Total','Monthly total') AS platform, SUM(CAST(sales AS BIGINT)) AS Totals, month_number 
+                    FROM clean_weekly_sales
+                    GROUP BY ROLLUP(platform, month_number)
+                    ORDER BY month_number, platform;
+            
+            -- Saving the Pivot Query as a CTE
+                WITH pv_temp AS(                
+                -- Temporary Result
+                    SELECT *
+                    FROM
+                        (SELECT COALESCE(platform, 'Total') AS platform, SUM(CAST(sales AS BIGINT)) AS Totals, month_number 
+                         FROM clean_weekly_sales
+                         GROUP BY CUBE(platform, month_number)) Q
+
+                -- Applying the Pivot operator
+                    PIVOT(
+                        SUM(Totals)
+                        FOR platform IN (
+                            retail,
+                            shopify,
+                            total)
+                    ) AS Pivot_table)
+            -- Main query
+                SELECT COALESCE(CAST(month_number AS VARCHAR(64)),'Total') Month,
+                       CAST((retail*100.0)/total AS DEC(10,2)) AS perc_retail,
+                       CAST((shopify*100.0)/total AS DEC(10,2)) AS perc_shopify  
+                FROM pv_temp
+
+
+    -- What is the percentage of sales by demographic for each year in the dataset?
+        -- Using Pivot
+            -- Derived Table             
+                SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals
+                FROM clean_weekly_sales
+                GROUP BY ROLLUP(demographic);
+            
+            -- Using Pivot table as CTE
+                WITH demo_cte AS (
+                -- Temporary table
+                    SELECT *
+                    FROM (SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals
+                          FROM clean_weekly_sales
+                          GROUP BY ROLLUP(demographic)) Q
+                -- Applying the Pivot Operator    
+                    PIVOT(
+                        SUM(Totals)
+                        FOR demographic IN(
+                            Couples,
+                            Families,
+                            Unknown,
+                            Total)
+                    ) AS Pivot_table)
+                --
+                SELECT CAST((Couples*100.0)/Total AS DEC(10,1)) AS perc_couples, 
+                       CAST((Families*100.0)/Total AS DEC(10,1)) AS perc_Families,
+                       CAST((Unknown*100.0)/Total AS DEC(10,1)) AS perc_Unknown
+                FROM demo_cte
+
+        -- Using CTES         
+            WITH 
+                total_retail AS(
+                    SELECT SUM(sales) AS tot_retail
+                    FROM clean_weekly_sales
+                    WHERE platform = 'retail'),
+                total_shopify AS(
+                    SELECT SUM(sales) AS tot_shopify
+                    FROM clean_weekly_sales
+                    WHERE platform = 'shopify'),
+                total AS(
+                    SELECT SUM(sales) AS total
+                    FROM clean_weekly_sales)
+            --
+            SELECT CAST((tot_retail*100.0)/total AS DEC(10,1)) AS perc_retail, CAST((tot_shopify*100.0)/total AS DEC(10,1)) AS perc_shopify
+            FROM total_retail, total_shopify, total
+            
+                
+
+
+    -- Which age_band and demographic values contribute the most to Retail sales?
+    -- Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
