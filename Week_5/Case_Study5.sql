@@ -17218,9 +17218,11 @@
         -- Add a new column called age_band after the original segment column using the following mapping on the number inside the segment value
         --https://www.sqlshack.com/sql-server-functions-for-converting-string-to-date/#:~:text=In%20SQL%20Server%2C%20converting%20a%20string%20to%20date%20explicitly%20can,()%20and%20PARSE()%20functions.
     -- Query            
+            DROP TABLE IF EXISTS clean_weekly_sales;
             SELECT wk_date,
                    DATEPART(WK,wk_date) AS week_number,
                    DATEPART(MM,wk_date) AS month_number,
+                   DATENAME(MM,wk_date) AS month,
                    DATENAME(YYYY,wk_date) AS calender_year,
                    region,
                    platform,
@@ -17370,9 +17372,9 @@
                 -- Temporary Result
                     SELECT *
                     FROM
-                        (SELECT COALESCE(platform, 'Total') AS platform, SUM(CAST(sales AS BIGINT)) AS Totals, month_number 
+                        (SELECT COALESCE(platform, 'Total') AS platform, SUM(CAST(sales AS BIGINT)) AS Totals, Month
                          FROM clean_weekly_sales
-                         GROUP BY CUBE(platform, month_number)) Q
+                         GROUP BY CUBE(platform, month)) Q
 
                 -- Applying the Pivot operator
                     PIVOT(
@@ -17383,26 +17385,25 @@
                             total)
                     ) AS Pivot_table)
             -- Main query
-                SELECT COALESCE(CAST(month_number AS VARCHAR(64)),'Total') Month,
+                SELECT COALESCE(Month,'Total') Month,
                        CAST((retail*100.0)/total AS DEC(10,2)) AS perc_retail,
                        CAST((shopify*100.0)/total AS DEC(10,2)) AS perc_shopify  
                 FROM pv_temp
 
-
     -- What is the percentage of sales by demographic for each year in the dataset?
         -- Using Pivot
             -- Derived Table             
-                SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals
-                FROM clean_weekly_sales
-                GROUP BY ROLLUP(demographic);
+                SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals, calender_year
+                FROM clean_weekly_sales 
+                GROUP BY CUBE(demographic,calender_year);
             
             -- Using Pivot table as CTE
                 WITH demo_cte AS (
                 -- Temporary table
                     SELECT *
-                    FROM (SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals
+                    FROM (SELECT COALESCE(demographic,'Total') AS demographic, SUM(sales) AS Totals, COALESCE(calender_year,'Total') AS calender_year
                           FROM clean_weekly_sales
-                          GROUP BY ROLLUP(demographic)) Q
+                          GROUP BY CUBE(demographic, calender_year)) Q
                 -- Applying the Pivot Operator    
                     PIVOT(
                         SUM(Totals)
@@ -17413,30 +17414,139 @@
                             Total)
                     ) AS Pivot_table)
                 --
-                SELECT CAST((Couples*100.0)/Total AS DEC(10,1)) AS perc_couples, 
+                SELECT COALESCE(calender_year, 'Total') AS Year,
+                       CAST((Couples*100.0)/Total AS DEC(10,1)) AS perc_couples, 
                        CAST((Families*100.0)/Total AS DEC(10,1)) AS perc_Families,
                        CAST((Unknown*100.0)/Total AS DEC(10,1)) AS perc_Unknown
-                FROM demo_cte
+                FROM demo_cte;
+
 
         -- Using CTES         
             WITH 
-                total_retail AS(
-                    SELECT SUM(sales) AS tot_retail
+                total_couples AS(
+                    SELECT COALESCE(calender_year,'Total') AS calender_year, SUM(sales) AS tot_couples
                     FROM clean_weekly_sales
-                    WHERE platform = 'retail'),
-                total_shopify AS(
-                    SELECT SUM(sales) AS tot_shopify
+                    WHERE demographic = 'couples'
+                    GROUP BY ROLLUP(calender_year)),
+                total_families AS(
+                    SELECT COALESCE(calender_year,'Total') AS calender_year, SUM(sales) AS tot_families
                     FROM clean_weekly_sales
-                    WHERE platform = 'shopify'),
+                    WHERE demographic = 'families'
+                    GROUP BY ROLLUP(calender_year)),
+                total_unknown AS(
+                    SELECT COALESCE(calender_year,'Total') AS calender_year, SUM(sales) AS tot_unknown
+                    FROM clean_weekly_sales
+                    WHERE demographic = 'unknown'
+                    GROUP BY ROLLUP(calender_year)),
                 total AS(
-                    SELECT SUM(sales) AS total
-                    FROM clean_weekly_sales)
+                    SELECT COALESCE(calender_year,'Total') AS calender_year, SUM(sales) AS total
+                    FROM clean_weekly_sales
+                    GROUP BY ROLLUP(calender_year))
             --
-            SELECT CAST((tot_retail*100.0)/total AS DEC(10,1)) AS perc_retail, CAST((tot_shopify*100.0)/total AS DEC(10,1)) AS perc_shopify
-            FROM total_retail, total_shopify, total
+            SELECT t.calender_year AS Year,
+                   CAST((tot_couples*100.0)/total AS DEC(10,1)) AS perc_couples,
+                   CAST((tot_families*100.0)/total AS DEC(10,1)) AS perc_families,
+                   CAST((tot_unknown*100.0)/total AS DEC(10,1)) AS perc_unknowns
+            FROM total_couples c
+            LEFT JOIN total_families f
+            ON c.calender_year = f.calender_year
+            LEFT JOIN total_unknown u
+            ON c.calender_year = u.calender_year
+            LEFT JOIN total t
+            ON c.calender_year = t.calender_year;
+            
+
             
                 
 
 
     -- Which age_band and demographic values contribute the most to Retail sales?
+        -- Using CTES
+            WITH 
+                QT AS (
+                    SELECT SUM(sales) AS Total 
+                    FROM clean_weekly_sales
+                    WHERE platform = 'retail'
+                    AND age_band <> 'unknown'),
+                Q1 AS (
+                    SELECT age_band, CAST((SUM(sales) * 100.0/Total) AS DEC(10,2)) AS Total 
+                    FROM clean_weekly_sales, QT
+                    WHERE platform = 'retail' AND age_band <> 'unknown'
+                    GROUP BY age_band,Total),
+                Q2 AS (
+                    SELECT demographic, CAST((SUM(sales) * 100.0/Total) AS DEC(10,2)) AS Total 
+                    FROM clean_weekly_sales, QT
+                    WHERE platform = 'retail' AND demographic <> 'unknown'
+                    GROUP BY demographic,Total)
+            --
+            SELECT 
+                (SELECT CONCAT_WS(' - ',age_band,Total)
+                FROM Q1
+                WHERE Total = (SELECT MAX(Total) FROM Q1)) AS [AGEBAND(%)],
+                (SELECT CONCAT_WS(' - ',demographic, Total)
+                FROM Q2
+                WHERE Total = (SELECT MAX(Total) FROM Q2)) AS [DEMOGRAPHICS(%)]
+        
+
+        -- Alternatively
+            WITH demo_ageband_CTE AS(
+                SELECT *    
+                FROM    
+                    (SELECT COALESCE(age_band,'Demographic_Total') AS age_band, COALESCE(demographic,'Age_band_total') AS demographic, SUM(sales) AS Totals 
+                    FROM clean_weekly_sales
+                    WHERE platform = 'retail' AND age_band <> 'unknown'
+                    GROUP BY  CUBE(age_band,demographic)) Q
+                --
+                PIVOT(
+                    SUM(Totals)
+                    FOR  age_band IN(
+                        [Middle Aged],
+                        [Retirees],
+                        [Young Adults],
+                        [Demographic_Total])
+                ) AS Pivot_Table)
+
+            SELECT  demographic,
+                    CAST(([Middle Aged]*100.0)/Total AS DEC(10,2)) AS Perc_Middle_Aged,
+                    CAST(([Retirees]*100.0)/Total AS DEC(10,2)) AS Perc_Retirees,
+                    CAST(([Young Adults]*100.0)/Total AS DEC(10,2)) AS Perc_Young_Adults
+            FROM demo_ageband_CTE, 
+                 (SELECT Demographic_Total AS Total 
+                  FROM demo_ageband_CTE
+                  WHERE demographic = 'Age_band_total') Q
+            WHERE demographic <> 'Age_band_total'
+            --
+
+        -- Alternatively
+            WITH demo_ageband_CTE AS (     
+                SELECT *
+                FROM
+                    (SELECT COALESCE(age_band + ' - ' +  demographic, 'Total') AS Band, SUM(sales) AS Totals 
+                    FROM clean_weekly_sales
+                    WHERE platform = 'retail' AND age_band <> 'unknown'
+                    GROUP BY ROLLUP((age_band + ' - ' + demographic))) Q
+
+                PIVOT(
+                    SUM(Totals)
+                    FOR Band IN(
+                        [Middle Aged - Couples],
+                        [Middle Aged - Families],
+                        [Retirees - Couples],
+                        [Retirees - Families],
+                        [Young Adults - Couples],
+                        [Young Adults - Families],
+                        [Total])
+                ) AS Pivot_Table)
+
+            SELECT
+                    CAST(([Middle Aged - Couples]*100.0)/[Total] AS DEC(10,2)) AS perc_MC,
+                    CAST(([Middle Aged - Families]*100.0)/[Total] AS DEC(10,2)) AS perc_MF,
+                    CAST(([Retirees - Couples]*100.0)/[Total] AS DEC(10,2)) AS perc_RC,
+                    CAST(([Retirees - Families]*100.0)/[Total] AS DEC(10,2)) AS perc_RF,
+                    CAST(([Young Adults - Couples]*100.0)/[Total] AS DEC(10,2)) AS perc_YC,
+                    CAST(([Young Adults - Families]*100.0)/[Total] AS DEC(10,2)) AS perc_YF
+            FROM demo_ageband_CTE
+        
     -- Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
+        SELECT *
+        FROM clean
