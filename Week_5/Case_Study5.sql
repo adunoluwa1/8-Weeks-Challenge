@@ -17658,43 +17658,26 @@
     -- demographic
     -- customer_type
     -- Creating Stored Procedure
-        DROP PROCEDURE IF EXISTS Bonus;
-        CREATE PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
-        AS
-            WITH 
-                [4WKS_BEFORE] AS 
-                    (SELECT DISTINCT @area AS Area, SUM(sales) OVER(PARTITION BY @area) AS Sales_B
-                    FROM clean_weekly_sales
-                    WHERE wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt
-                    /*GROUP BY @area*/),
-                [4WKS_AFTER]  AS 
-                    (SELECT DISTINCT @area AS Area, SUM(sales) OVER(PARTITION BY @area) AS Sales_A
-                    FROM clean_weekly_sales
-                    WHERE wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt)
-                    /*GROUP BY @area*/)
-            --
-            SELECT a.Area, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
-                CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
-            FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
-            WHERE b.Area = a.Area
-        GO;
+
+        -- ALTER PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
+        -- AS
+        --     WITH 
+        --         [4WKS_BEFORE] AS 
+        --             (SELECT DISTINCT @area AS A, SUM(sales) OVER(PARTITION BY @area) AS Sales_B
+        --             FROM clean_weekly_sales
+        --             WHERE wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt 
+        --             /*GROUP BY @area*/),
+        --         [4WKS_AFTER]  AS 
+        --             (SELECT DISTINCT @area AS B, SUM(sales) OVER(PARTITION BY @area) AS Sales_A
+        --             FROM clean_weekly_sales
+        --             WHERE wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt)
+        --             /*GROUP BY @area*/)
+        --     --
+        --     SELECT A, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
+        --         CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
+        --     FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
+        --     -- WHERE A = B
+        -- GO
     -- 
     -- Executing Stored Procedure
-        EXEC Bonus @wk = 4, @dt = '2020-06-15', @area = [region]
-
-            WITH 
-                [4WKS_BEFORE] AS 
-                    (SELECT DISTINCT region AS Area, SUM(sales) OVER(PARTITION BY region) AS Sales_B
-                    FROM clean_weekly_sales
-                    WHERE wk_date BETWEEN DATEADD(WK,4*(-1),'2020-06-15') AND '2020-06-15'
-                    /*GROUP BY @area*/),
-                [4WKS_AFTER]  AS 
-                    (SELECT DISTINCT region AS Area, SUM(sales) OVER(PARTITION BY region) AS Sales_A
-                    FROM clean_weekly_sales
-                    WHERE wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15')
-                    /*GROUP BY @area*/)
-            --
-            SELECT a.Area, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
-                CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
-            FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
-            WHERE b.Area = a.Area
+        -- EXEC Bonus @wk = 4, @dt = '2020-06-15', @area = "demographic";
