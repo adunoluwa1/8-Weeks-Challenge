@@ -17610,43 +17610,91 @@
                 CONCAT(CAST(([2] - [1])*100.0/[1] AS DEC(10,2)),'%') AS [Rate]
             FROM P_CTE;
     --
-    -- Creating Stored Procedure with date parameter
-        -- DROP PROCEDURE IF EXISTS Analysis;
-        -- CREATE PROCEDURE Analysis @wk INT, @dt DATE
-        -- AS
-        --     -- Using Pivot CTE
-        --         WITH P_CTE AS(
-        --         -- Derived Query
-        --             SELECT *
-        --             FROM
-        --                 (SELECT DISTINCT [Page] AS Period, SUM(Sales) OVER(PARTITION BY Page) AS Sales
-        --                 FROM
-        --                     (SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY Week_number) AS Sales,
-        --                             NTILE(2) OVER(ORDER BY Week_number) AS Page
-        --                     FROM clean_weekly_sales
-        --                     WHERE (wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt) OR (wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt))
-                           
-        --                     -- WHERE week_number BETWEEN 21 AND 29
-        --                     ) Q) S
-        --         -- Pivoting
-        --             PIVOT(
-        --                 SUM(Sales)
-        --                 FOR [Period] IN(
-        --                     [1],
-        --                     [2])
-        --             ) AS Pivot_Table)
-        --         --
-        --         SELECT [1] AS [Before], [2] AS [After], [2]-[1] AS [Difference],
-        --             CONCAT(CAST(([2] - [1])*100.0/[1] AS DEC(10,2)),'%') AS [Rate]
-        --         FROM P_CTE
-        -- GO;
-    --
-    -- Executing Stored Procedures
-        
-        EXEC Analysis @wk = 4, @dt = '2020-06-15'
-        EXEC Analysis @wk = 12, @dt = '2020-06-15' -- 2020
-        EXEC Analysis @wk = 12, @dt = '2019-06-15' -- 2019
-        EXEC Analysis @wk = 12, @dt = '2018-06-15' -- 2018
+    -- Using Stored Procedure
+        -- Creating Stored Procedure with date parameter
+            -- DROP PROCEDURE IF EXISTS Analysis;
+            -- CREATE PROCEDURE Analysis @wk INT, @dt DATE
+            -- AS
+            --     -- Using Pivot CTE
+            --         WITH P_CTE AS(
+            --         -- Derived Query
+            --             SELECT *
+            --             FROM
+            --                 (SELECT DISTINCT [Page] AS Period, SUM(Sales) OVER(PARTITION BY Page) AS Sales
+            --                 FROM
+            --                     (SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY Week_number) AS Sales,
+            --                             NTILE(2) OVER(ORDER BY Week_number) AS Page
+            --                     FROM clean_weekly_sales
+            --                     WHERE (wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt) OR (wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt))
+                            
+            --                     -- WHERE week_number BETWEEN 21 AND 29
+            --                     ) Q) S
+            --         -- Pivoting
+            --             PIVOT(
+            --                 SUM(Sales)
+            --                 FOR [Period] IN(
+            --                     [1],
+            --                     [2])
+            --             ) AS Pivot_Table)
+            --         --
+            --         SELECT [1] AS [Before], [2] AS [After], [2]-[1] AS [Difference],
+            --             CONCAT(CAST(([2] - [1])*100.0/[1] AS DEC(10,2)),'%') AS [Rate]
+            --         FROM P_CTE
+            -- GO;
+        --
+        -- Executing Stored Procedures
+            
+            EXEC Analysis @wk = 4, @dt = '2020-06-15'
+            EXEC Analysis @wk = 12, @dt = '2020-06-15' -- 2020
+            EXEC Analysis @wk = 12, @dt = '2019-06-15' -- 2019
+            EXEC Analysis @wk = 12, @dt = '2018-06-15' -- 2018
 
 --
 /*              Bonus Questions                     */
+-- Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
+    -- region
+    -- platform
+    -- age_band
+    -- demographic
+    -- customer_type
+    -- Creating Stored Procedure
+        DROP PROCEDURE IF EXISTS Bonus;
+        CREATE PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
+        AS
+            WITH 
+                [4WKS_BEFORE] AS 
+                    (SELECT DISTINCT @area AS Area, SUM(sales) OVER(PARTITION BY @area) AS Sales_B
+                    FROM clean_weekly_sales
+                    WHERE wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt
+                    /*GROUP BY @area*/),
+                [4WKS_AFTER]  AS 
+                    (SELECT DISTINCT @area AS Area, SUM(sales) OVER(PARTITION BY @area) AS Sales_A
+                    FROM clean_weekly_sales
+                    WHERE wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt)
+                    /*GROUP BY @area*/)
+            --
+            SELECT a.Area, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
+                CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
+            FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
+            WHERE b.Area = a.Area
+        GO;
+    -- 
+    -- Executing Stored Procedure
+        EXEC Bonus @wk = 4, @dt = '2020-06-15', @area = [region]
+
+            WITH 
+                [4WKS_BEFORE] AS 
+                    (SELECT DISTINCT region AS Area, SUM(sales) OVER(PARTITION BY region) AS Sales_B
+                    FROM clean_weekly_sales
+                    WHERE wk_date BETWEEN DATEADD(WK,4*(-1),'2020-06-15') AND '2020-06-15'
+                    /*GROUP BY @area*/),
+                [4WKS_AFTER]  AS 
+                    (SELECT DISTINCT region AS Area, SUM(sales) OVER(PARTITION BY region) AS Sales_A
+                    FROM clean_weekly_sales
+                    WHERE wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15')
+                    /*GROUP BY @area*/)
+            --
+            SELECT a.Area, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
+                CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
+            FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
+            WHERE b.Area = a.Area

@@ -563,9 +563,9 @@
         -- DROP VIEW pizza_toppings_pivoted 
 
         -- CREATE VIEW pizza_toppings_pivoted AS
-        --     SELECT pizza_id,TRIM([value]) AS topping_id
-        --     FROM pizza_recipes
-        --     CROSS APPLY STRING_SPLIT(toppings,',')
+            -- SELECT pizza_id,TRIM([value]) AS topping_id
+            -- FROM pizza_recipes
+            -- CROSS APPLY STRING_SPLIT(toppings,',')
 
         -- CREATE VIEW pizza AS
         --     SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
