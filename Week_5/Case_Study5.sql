@@ -17218,7 +17218,7 @@
         -- Add a new column called age_band after the original segment column using the following mapping on the number inside the segment value
         --https://www.sqlshack.com/sql-server-functions-for-converting-string-to-date/#:~:text=In%20SQL%20Server%2C%20converting%20a%20string%20to%20date%20explicitly%20can,()%20and%20PARSE()%20functions.
     -- Query            
-            DROP TABLE IF EXISTS clean_weekly_sales;
+            -- DROP TABLE IF EXISTS clean_weekly_sales;
             SELECT wk_date,
                    DATEPART(WK,wk_date) AS week_number,
                    DATEPART(MM,wk_date) AS month_number,
@@ -17514,7 +17514,7 @@
                  (SELECT Demographic_Total AS Total 
                   FROM demo_ageband_CTE
                   WHERE demographic = 'Age_band_total') Q
-            WHERE demographic <> 'Age_band_total'
+            WHERE demographic <> 'Age_band_total';
             --
 
         -- Alternatively
@@ -17557,28 +17557,96 @@
                         SUM(sales) OVER(PARTITION BY calender_year, platform)/
                         SUM(transactions) OVER(PARTITION BY calender_year, platform)
         FROM clean_weekly_sales
-        ORDER BY calender_year, platform
+        ORDER BY calender_year, platform;
 
 --
 /*              Before & After Analysis         */
--- This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
--- Taking the week_date value of 2020-06-15 as the baseline week where the Data Mart sustainable packaging changes came into effect.
--- We would include all week_date values for 2020-06-15 as the start of the period after the change and the previous week_date values would be before
--- Using this analysis approach - answer the following questions:
--- What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
--- What about the entire 12 weeks before and after?
--- How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
+    -- This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
+        -- Taking the week_date value of 2020-06-15 as the baseline week where the Data Mart sustainable packaging changes came into effect.
+        -- We would include all week_date values for 2020-06-15 as the start of the period after the change and the previous week_date values would be before
+        -- Using this analysis approach - answer the following questions:
+        -- What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
+        -- What about the entire 12 weeks before and after?
+        -- How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
+    --
+    -- One Method
+        WITH 
+            [4WKS_BEFORE] AS 
+                (SELECT SUM(sales) AS Sales_B
+                FROM clean_weekly_sales
+                WHERE wk_date BETWEEN DATEADD(WK,-4,'2020-06-15') AND '2020-06-15'),
+            [4WKS_AFTER]  AS 
+                (SELECT SUM(sales) AS Sales_A
+                FROM clean_weekly_sales
+                WHERE wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15')) 
+        --
+        SELECT Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
+            CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
+        FROM [4WKS_BEFORE], [4WKS_AFTER];
+    --
+    -- Another Method
+        -- Using CTE
+            WITH P_CTE AS(
+            -- Derived Query
+                SELECT *
+                FROM
+                    (SELECT DISTINCT [Page] AS Period, SUM(Sales) OVER(PARTITION BY Page) AS Sales
+                    FROM
+                        (SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY Week_number) AS Sales,
+                                NTILE(2) OVER(ORDER BY Week_number) AS Page
+                        FROM clean_weekly_sales
+                        WHERE (wk_date BETWEEN DATEADD(WK,-4,'2020-06-15') AND '2020-06-15') OR (wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15'))
+                        -- WHERE week_number BETWEEN 21 AND 29
+                        ) Q) S
+            -- Pivoting
+                PIVOT(
+                    SUM(Sales)
+                    FOR [Period] IN(
+                        [1],
+                        [2])
+                ) AS Pivot_Table)
+        -- Main Query
+            SELECT [1] AS [Before], [2] AS [After], [2] - [1] AS Difference, 
+                CONCAT(CAST(([2] - [1])*100.0/[1] AS DEC(10,2)),'%') AS [Rate]
+            FROM P_CTE;
+    --
+    -- Creating Stored Procedure with date parameter
+        -- DROP PROCEDURE IF EXISTS Analysis;
+        -- CREATE PROCEDURE Analysis @wk INT, @dt DATE
+        -- AS
+        --     -- Using Pivot CTE
+        --         WITH P_CTE AS(
+        --         -- Derived Query
+        --             SELECT *
+        --             FROM
+        --                 (SELECT DISTINCT [Page] AS Period, SUM(Sales) OVER(PARTITION BY Page) AS Sales
+        --                 FROM
+        --                     (SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY Week_number) AS Sales,
+        --                             NTILE(2) OVER(ORDER BY Week_number) AS Page
+        --                     FROM clean_weekly_sales
+        --                     WHERE (wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt) OR (wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt))
+                           
+        --                     -- WHERE week_number BETWEEN 21 AND 29
+        --                     ) Q) S
+        --         -- Pivoting
+        --             PIVOT(
+        --                 SUM(Sales)
+        --                 FOR [Period] IN(
+        --                     [1],
+        --                     [2])
+        --             ) AS Pivot_Table)
+        --         --
+        --         SELECT [1] AS [Before], [2] AS [After], [2]-[1] AS [Difference],
+        --             CONCAT(CAST(([2] - [1])*100.0/[1] AS DEC(10,2)),'%') AS [Rate]
+        --         FROM P_CTE
+        -- GO;
+    --
+    -- Executing Stored Procedures
+        
+        EXEC Analysis @wk = 4, @dt = '2020-06-15'
+        EXEC Analysis @wk = 12, @dt = '2020-06-15' -- 2020
+        EXEC Analysis @wk = 12, @dt = '2019-06-15' -- 2019
+        EXEC Analysis @wk = 12, @dt = '2018-06-15' -- 2018
 
-    SELECT SUM(sales) AS Sales
-    FROM clean_weekly_sales
-    WHERE wk_date BETWEEN DATEADD(WK,-4,'2020-06-15') AND '2020-06-15'
-   
-    SELECT SUM(sales) AS Sales
-    FROM clean_weekly_sales
-    WHERE wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15')
-
-    SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY week_number)
-    FROM clean_weekly_sales
-    WHERE week_number BETWEEN 21 AND 25
-    ORDER BY week_number
- 
+--
+/*              Bonus Questions                     */
