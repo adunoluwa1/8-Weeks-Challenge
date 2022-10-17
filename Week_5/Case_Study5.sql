@@ -1,7 +1,7 @@
-/*              Create Database             */
+/*              Create Database                 */
     -- CREATE DATABASE data_mart;
 --
-/*              Create Tables               */
+/*              Create Tables                   */
 
         -- DROP TABLE IF EXISTS weekly_sales;
         -- CREATE TABLE weekly_sales (
@@ -17209,7 +17209,7 @@
         -- ('26/3/18', 'AFRICA', 'Retail', 'C3', 'Existing', '218516', '12083475');
 
 --
-/*              Data Cleaning               */
+/*              Data Cleaning                   */
     -- In a single query, perform the following operations and generate a new table in the data_mart schema named clean_weekly_sales:
         -- Convert the week_date to a DATE format
         -- Add a week_number as the second column for each week_date value, for example any value from the 1st of January to 7th of January will be 1, 8th to 14th will be 2 etc
@@ -17245,7 +17245,7 @@
                 FROM weekly_sales) sq
 
 --
-/*              Data Exploration            */
+/*              Data Exploration                */
     -- What day of the week is used for each week_date value?
         -- Window Functions
             SELECT DISTINCT DATENAME(DW,wk_date) AS wk_day, COUNT(*) OVER(PARTITION BY DATENAME(DW,wk_date)) AS #transactions
@@ -17558,3 +17558,27 @@
                         SUM(transactions) OVER(PARTITION BY calender_year, platform)
         FROM clean_weekly_sales
         ORDER BY calender_year, platform
+
+--
+/*              Before & After Analysis         */
+-- This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
+-- Taking the week_date value of 2020-06-15 as the baseline week where the Data Mart sustainable packaging changes came into effect.
+-- We would include all week_date values for 2020-06-15 as the start of the period after the change and the previous week_date values would be before
+-- Using this analysis approach - answer the following questions:
+-- What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
+-- What about the entire 12 weeks before and after?
+-- How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
+
+    SELECT SUM(sales) AS Sales
+    FROM clean_weekly_sales
+    WHERE wk_date BETWEEN DATEADD(WK,-4,'2020-06-15') AND '2020-06-15'
+   
+    SELECT SUM(sales) AS Sales
+    FROM clean_weekly_sales
+    WHERE wk_date BETWEEN '2020-06-15' AND DATEADD(WK,4,'2020-06-15')
+
+    SELECT DISTINCT Week_number, SUM(sales) OVER(PARTITION BY week_number ORDER BY week_number)
+    FROM clean_weekly_sales
+    WHERE week_number BETWEEN 21 AND 25
+    ORDER BY week_number
+ 
