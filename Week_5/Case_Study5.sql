@@ -17545,8 +17545,16 @@
                     CAST(([Retirees - Families]*100.0)/[Total] AS DEC(10,2)) AS perc_RF,
                     CAST(([Young Adults - Couples]*100.0)/[Total] AS DEC(10,2)) AS perc_YC,
                     CAST(([Young Adults - Families]*100.0)/[Total] AS DEC(10,2)) AS perc_YF
-            FROM demo_ageband_CTE
+            FROM demo_ageband_CTE;
         
     -- Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
-        SELECT *
-        FROM clean
+        SELECT DISTINCT calender_year, platform, 
+                AVG(avg_transaction) OVER(PARTITION BY calender_year, platform ORDER BY Calender_year, Platform) AS Avg_Transaction_Size
+        FROM clean_weekly_sales
+        ORDER BY calender_year, platform
+
+        SELECT DISTINCT calender_year, platform,
+                        SUM(sales) OVER(PARTITION BY calender_year, platform)/
+                        SUM(transactions) OVER(PARTITION BY calender_year, platform)
+        FROM clean_weekly_sales
+        ORDER BY calender_year, platform
