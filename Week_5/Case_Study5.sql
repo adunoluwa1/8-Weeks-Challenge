@@ -17651,33 +17651,33 @@
 
 --
 /*              Bonus Questions                     */
--- Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
-    -- region
-    -- platform
-    -- age_band
-    -- demographic
-    -- customer_type
-    -- Creating Stored Procedure
+    -- Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
+        -- region
+        -- platform
+        -- age_band
+        -- demographic
+        -- customer_type
+        -- Creating Stored Procedure
 
-        -- ALTER PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
-        -- AS
-        --     WITH 
-        --         [4WKS_BEFORE] AS 
-        --             (SELECT DISTINCT @area AS A, SUM(sales) OVER(PARTITION BY @area) AS Sales_B
-        --             FROM clean_weekly_sales
-        --             WHERE wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt 
-        --             /*GROUP BY @area*/),
-        --         [4WKS_AFTER]  AS 
-        --             (SELECT DISTINCT @area AS B, SUM(sales) OVER(PARTITION BY @area) AS Sales_A
-        --             FROM clean_weekly_sales
-        --             WHERE wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt)
-        --             /*GROUP BY @area*/)
-        --     --
-        --     SELECT A, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
-        --         CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
-        --     FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
-        --     -- WHERE A = B
-        -- GO
-    -- 
-    -- Executing Stored Procedure
-1
+            -- ALTER PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
+            -- AS
+            --     WITH 
+            --         [4WKS_BEFORE] AS 
+            --             (SELECT DISTINCT @area AS A, SUM(sales) OVER(PARTITION BY @area) AS Sales_B
+            --             FROM clean_weekly_sales
+            --             WHERE wk_date BETWEEN DATEADD(WK,@wk*(-1),@dt) AND @dt 
+            --             /*GROUP BY @area*/),
+            --         [4WKS_AFTER]  AS 
+            --             (SELECT DISTINCT @area AS B, SUM(sales) OVER(PARTITION BY @area) AS Sales_A
+            --             FROM clean_weekly_sales
+            --             WHERE wk_date BETWEEN @dt AND DATEADD(WK,@wk,@dt)
+            --             /*GROUP BY @area*/)
+            --     --
+            --     SELECT A, Sales_B, Sales_A, Sales_A - Sales_B AS Difference,
+            --         CAST((Sales_A - Sales_B)*100.0/Sales_B AS DEC(10,2)) AS [Rate]
+            --     FROM [4WKS_BEFORE] b, [4WKS_AFTER] a
+            --     -- WHERE A = B
+            -- GO
+        -- 
+        -- Executing Stored Procedure
+    1
