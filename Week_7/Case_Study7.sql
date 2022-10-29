@@ -391,7 +391,42 @@
             FROM product_details p
             
     -- What is the top selling product for each category?
+        -- Group By x correlated subquery in having clause    
+            SELECT category_name, product_name, SUM(qty) AS Quantity
+            FROM sales s
+            LEFT JOIN product_details p 
+            ON p.product_id = s.prod_id
+            GROUP BY category_name, product_name
+            HAVING SUM(qty) = (SELECT MAX(Quantity)
+                               FROM (SELECT category_name, SUM(qty) AS Quantity
+                                      FROM sales s1
+                                      LEFT JOIN product_details p1
+                                      ON p1.product_id = s1.prod_id
+                                      GROUP BY category_name, product_name) Q
+                               WHERE Q.category_name = p.category_name)
+            ORDER BY category_name, Quantity DESC
+
+        -- Window functions
+            SELECT DISTINCT category_name,
+                   FIRST_VALUE(product_name) OVER(PARTITION BY category_name ORDER BY Quantity DESC) [Product Name],
+                   LAST_VALUE(Quantity) OVER(PARTITION BY category_name ORDER BY Quantity 
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) [Quantity]
+            FROM (SELECT DISTINCT category_name, product_name, SUM(qty) OVER(PARTITION BY category_name, product_name) Quantity
+                  FROM sales s
+                  LEFT JOIN product_details p 
+                  ON p.product_id = s.prod_id) Q
+
+
+
     -- What is the percentage split of revenue by product for each segment?
+            
+            SELECT COALESCE(segment_name, 'Total') Segment,
+                   CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+            FROM sales s
+            LEFT JOIN product_details p 
+            ON p.product_id = s.prod_id
+            GROUP BY segment_name WITH ROLLUP
+
     -- What is the percentage split of revenue by segment for each category?
     -- What is the percentage split of total revenue by category?
     -- What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
