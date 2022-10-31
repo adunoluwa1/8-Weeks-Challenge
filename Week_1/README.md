@@ -1,6 +1,5 @@
 # 8-Week SQL Challenge
-[Home](adunoluwa1/SQL-8-Weeks-Challenge)
-[🌐 Case Study #1 - Danny's Diner](https://8weeksqlchallenge.com/case-study-1/)
+[```Home```](adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #1 - Danny's Diner```](https://8weeksqlchallenge.com/case-study-1/)
 
 ![image](https://user-images.githubusercontent.com/99233674/199024658-a1b34542-46a8-442f-913b-6b44e31cf79c.png)
 
@@ -20,10 +19,39 @@
 # 📂 Dataset
 This case study has 3 key datasets 
 - sales
+  <details><summary>View table</summary>
+  <p>
+  
+  ```
+     Sales table
+  ```
+  
+  </p>
+  </details>
+
 - menu
+
+  <details><summary>View table</summary>
+  <p>
+  
+  ```
+     Menu table
+  ```
+  
+  </p>
+  </details>
+
 - members
 
-
+  <details><summary>View table</summary>
+  <p>
+  
+  ```
+     Members table
+  ```
+  
+  </p>
+  </details>
 
 
 
@@ -46,8 +74,9 @@ Each of the following case study questions can be answered using a single SQL st
 
 
 # 🚀 Solutions
-
-
+  <details><summary>View solution</summary>
+  <p>
+  
 1. Total amount spent by each customer
 
 ```sql
@@ -345,3 +374,8 @@ Q8. Total items and amount spent for each member before becoming a member
     LEFT JOIN members me
     ON me.customer_id = s.customer_id;
 ```
+
+  
+  </p>
+  </details>
+
