@@ -6,10 +6,10 @@ https://8weeksqlchallenge.com/case-study-1/
 ![image](https://user-images.githubusercontent.com/99233674/199024658-a1b34542-46a8-442f-913b-6b44e31cf79c.png)
 
 # 📕 Table of Contents
-- 🛠️ Problem Statement
-- 📂 Dataset
-- 🧙‍ [Case Study Questions] (https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8Fcase-study-questions) 
-- 🚀 Solutions
+- 🛠️ [Problem Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8F-problem-statement)
+- 📂 [Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#-dataset)
+- 🧙‍ [Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8Fcase-study-questions) 
+- 🚀 [Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#-solutions)
 
 # 🛠️ Problem Statement
 > Danny wants to use the data to answer a few simple questions about his customers, especially about their visiting patterns, how much money they’ve spent and also which menu items are their favourite. Having this deeper connection with his customers will help him deliver a better and more personalised experience for his loyal customers.
