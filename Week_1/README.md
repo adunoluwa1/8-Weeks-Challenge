@@ -12,7 +12,6 @@ https://8weeksqlchallenge.com/case-study-1/
 - 🚀 Solutions
 
 # 🛠️ Problem Statement
----
 > Danny wants to use the data to answer a few simple questions about his customers, especially about their visiting patterns, how much money they’ve spent and also which menu items are their favourite. Having this deeper connection with his customers will help him deliver a better and more personalised experience for his loyal customers.
 
 > He plans on using these insights to help him decide whether he should expand the existing customer loyalty program - additionally he needs help to generate some basic datasets so his team can easily inspect the data without needing to use SQL.
@@ -20,7 +19,6 @@ https://8weeksqlchallenge.com/case-study-1/
 > Danny has provided you with a sample of his overall customer data due to privacy issues - but he hopes that these examples are enough for you to write fully functioning SQL queries to help him answer his questions!
 
 # 📂 Dataset
----
 This case study has 3 key datasets 
 - sales
 - menu
@@ -31,7 +29,6 @@ This case study has 3 key datasets
 
 
 # 🧙‍♂️Case Study Questions
----
 Each of the following case study questions can be answered using a single SQL statement:
 
 1. What is the total amount each customer spent at the restaurant?
@@ -46,5 +43,34 @@ Each of the following case study questions can be answered using a single SQL st
 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 ## Bonus Questions
----
 > Danny also requires further information about the ranking of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
+
+
+# 🚀 Solutions
+
+
+1. Total amount spent by each customer
+
+```
+    --Using Joins
+        SELECT s.customer_id, SUM(m.price) AS [Amount Spent]
+        FROM sales s
+        LEFT JOIN menu m
+        ON m.product_id = s.product_id
+        GROUP BY s.customer_id
+
+    --Alternatively - Using Correlated Subquery
+        SELECT  DISTINCT  s1.customer_id, 
+                (SELECT SUM(m.price)
+                FROM menu m, sales s2
+                WHERE s1.customer_id = s2.customer_id AND s2.product_id = m.product_id) AS [Amount Spent]
+        FROM sales s1
+
+    --Alternatively - Using Window Functions
+        SELECT DISTINCT s.customer_id,
+                SUM(m.price) OVER(PARTITION BY s.customer_id) AS [Amount Spent]
+        FROM sales s
+        LEFT JOIN menu m
+        ON m.product_id = s.product_id
+        ORDER BY [Amount Spent] DESC
+```
