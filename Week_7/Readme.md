@@ -1,7 +1,9 @@
-# 8-Week SQL Challenge - Balanced Tree Clothing Co.
-[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #2 - Balanced Tree Clothing Co.```](https://8weeksqlchallenge.com/case-study-2/)
+# 8-Week SQL Challenge 
+# Cast Study #7 - Balanced Tree Clothing Co.
 
-![image](https://user-images.githubusercontent.com/99233674/199048938-2251fe07-09bb-4f61-a564-18b8a0b1f68f.png)
+[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #7 - Balanced Tree Clothing Co.```](https://8weeksqlchallenge.com/case-study-7/)
+
+![image](https://user-images.githubusercontent.com/99233674/199073414-24c4102f-8f01-47bc-adfe-63ee20ad40cf.png)
 
 # 📕 Table of Contents
 - [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#%EF%B8%8F-background-statement)
