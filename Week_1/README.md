@@ -6,8 +6,8 @@
 # 📕 Table of Contents
 - [🛠️ Problem Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8F-problem-statement)
 - [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#-dataset)
-- [🧙‍ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8Fcase-study-questions) 
-- [🚀 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#-solutions)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8Fcase-study-questions) 
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#-solutions)
 
 # 🛠️ Problem Statement
 > Danny wants to use the data to answer a few simple questions about his customers, especially about their visiting patterns, how much money they’ve spent and also which menu items are their favourite. Having this deeper connection with his customers will help him deliver a better and more personalised experience for his loyal customers.
@@ -55,7 +55,7 @@ This case study has 3 key datasets
 
 
 
-# 🧙‍♂️Case Study Questions
+# ✒️♂️Case Study Questions
 Each of the following case study questions can be answered using a single SQL statement:
 
 1. What is the total amount each customer spent at the restaurant?
@@ -73,7 +73,7 @@ Each of the following case study questions can be answered using a single SQL st
 > Danny also requires further information about the ranking of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
 
 
-# 🚀 Solutions
+# 🏆 Solutions
   <details><summary>View solution</summary>
   <p>
   
