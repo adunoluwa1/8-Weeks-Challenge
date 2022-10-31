@@ -1,8 +1,7 @@
-/*          Database Creation           */
+/*              Database Creation                       */
     -- CREATE DATABASE balanced_tree;
-
-
-/*          Table Creation              */
+--
+/*              Table Creation                          */
     -- Product Hierarchy
         -- CREATE TABLE product_hierarchy (
         -- "id" INTEGER,
@@ -97,7 +96,7 @@
         --   "start_txn_time" TIMESTAMP
         -- );
 --
-/*          High Level Sales Analysis                   */
+/*              High Level Sales Analysis               */
     -- What was the total quantity sold for all products?
         -- Window functions
             SELECT DISTINCT product_name, SUM(qty) OVER(PARTITION BY prod_id) AS quantity_sold
@@ -169,7 +168,7 @@
             -- FETCH NEXT 3 ROWS ONLY
         --
 --
-/*          Transaction Analysis                        */
+/*              Transaction Analysis                    */
     -- How many unique transactions were there?
             SELECT COUNT(DISTINCT txn_id) AS [# Unique Transactions]
             FROM sales
@@ -210,13 +209,7 @@
             SELECT DISTINCT txn_id, CONVERT(DEC(10,4), AVG(discount) OVER(PARTITION BY txn_id)) AS [Avg Discount Value]
             FROM sales
             ORDER BY [Avg Discount Value] DESC
-        
-        -- 
-            -- SELECT CONVERT(DEC(10,4), AVG([Discount Value])) AS [Avg Discount Value for all trasactions]
-            -- FROM
-            --     (SELECT DISTINCT txn_id, SUM(discount) OVER(PARTITION BY txn_id) AS [Discount Value]
-            --     FROM sales) Q
-
+        --    
     -- What is the percentage split of all transactions for members vs non-members?
         -- Pivoting
             WITH memCTE AS
@@ -262,6 +255,7 @@
             ) Q
 
     -- What is the average revenue for member transactions and non-member transactions?
+        -- Window functions            
             SELECT member, revenue/#txns AS Avg_revenue
             FROM    
                 (SELECT DISTINCT s.member, SUM(price * qty * (1 - discount/100.0)) OVER(PARTITION BY s.member) AS revenue, #txns
@@ -271,13 +265,13 @@
                          GROUP BY member) r
                  ON s.member = r.member) Q
             
-            --
+        -- Group By
             SELECT member, SUM(qty * price * (1 - discount/100.0))/COUNT(DISTINCT txn_id) Avg_revenue
             FROM sales
             GROUP BY member
             ORDER BY member
---            
-/*          Product Analysis                            */
+--
+/*              Product Analysis                        */
     -- What are the top 3 products by total revenue before discount?
         -- Group By
             SELECT TOP 3 product_name, SUM(qty * s.price) revenue
@@ -552,9 +546,9 @@
             ON p.product_id = s.prod_id
             GROUP BY product_name) Q
         ORDER BY Penetration DESC
-    -- What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
+    -- What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction? **
 --
-/*         Reporting Challenge                        */
+/*              Reporting Challenge                     */
     -- Questions
         -- Write a single SQL script that combines all of the previous questions into a scheduled report that the 
         -- Balanced Tree team can run at the beginning of each month to calculate the previous month’s values.
@@ -679,3 +673,25 @@
     --
     EXEC Report1 @month = 'February', @member = 't'
     EXEC Report2 @month = 'February'
+--
+/*              Bonus Challenge                         */
+    -- Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table.
+    -- Hint: you may want to consider using a recursive CTE to solve this problem!
+
+    SELECT DISTINCT 
+           pp.product_id product_id, price,
+           CONCAT_WS(' - ',r.level_text,ph.level_text) product_name,
+           ph.id category_id, r.parent_id segment_id, r.id style_id,  
+           ph.level_text category_name, h.level_text segment_name, 
+           r.level_text style_name 
+    FROM product_hierarchy r 
+    LEFT JOIN product_hierarchy h 
+    ON h.id = r.parent_id
+    LEFT JOIN product_hierarchy ph 
+    ON ph.id = h.parent_id
+    LEFT JOIN product_prices pP
+    ON pp.id = r.id
+    WHERE ph.level_text IS NOT NULL
+
+    SELECT * FROM product_details
+--
