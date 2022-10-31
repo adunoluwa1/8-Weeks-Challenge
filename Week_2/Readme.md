@@ -20,76 +20,78 @@
 
 # 📂 Dataset
 This case study has 3 key datasets 
+<details><summary>View Datasets</summary>
+  <p>
+
 - runners
   <details><summary>View table</summary>
-  <p>
+    <p>
   
   ```
-     Runners table
+  Runners table
   ```
-  
-  </p>
+    </p>
   </details>
 
 - Customer Orders
 
   <details><summary>View table</summary>
-  <p>
+    <p>
   
-  ```
-     Customer Orders table
-  ```
-  
-  </p>
+    ```
+    Customer Orders table
+    ```
+    </p>
   </details>
 
 - Runner Orders
 
   <details><summary>View table</summary>
-  <p>
-  
-  ```
-     Runner Orders table
-  ```
-  
-  </p>
+    <p>
+    
+    ```
+    Runner Orders table
+    ```
+    </p>
   </details>
 
 - Pizza Names
 
   <details><summary>View table</summary>
-  <p>
+    <p>
   
-  ```
-     Pizza Names table
-  ```
-  
-  </p>
+    ```
+    Pizza Names table
+    ```
+    </p>
   </details>
 
 - Pizza Recipes
-
+  
   <details><summary>View table</summary>
-  <p>
+    <p>
   
-  ```
-     Pizza Recipes table
-  ```
+    ```
+    Pizza Recipes table
+    ```
   
-  </p>
+    </p>
   </details>
 
 - Pizza Toppings
 
   <details><summary>View table</summary>
-  <p>
+    <p>
   
-  ```
-     Pizza Toppings table
-  ```
+    ```
+    Pizza Toppings table
+    ```
+  
+    </p>
+  </details>
   
   </p>
-  </details>
+</details>
   
   
 # ✒️ Case Study Questions
@@ -598,23 +600,23 @@ Each of the following case study questions can be answered using a single SQL st
   
 ```sql
   -- 0. Creating view for toppings id 
-        -- https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
-        -- DROP VIEW pizza_toppings_pivoted 
+        https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
+        DROP VIEW pizza_toppings_pivoted 
 
-        -- CREATE VIEW pizza_toppings_pivoted AS
-            -- SELECT pizza_id,TRIM([value]) AS topping_id
-            -- FROM pizza_recipes
-            -- CROSS APPLY STRING_SPLIT(toppings,',')
+         CREATE OR ALTER VIEW pizza_toppings_pivoted AS
+             SELECT pizza_id,TRIM([value]) AS topping_id
+             FROM pizza_recipes
+             CROSS APPLY STRING_SPLIT(toppings,',')
 
-        -- CREATE VIEW pizza AS
-        --     SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
-        --     FROM pizza_names n
-        --     LEFT JOIN pizza_recipes r
-        --     ON r.pizza_id = n.pizza_id
-        --     LEFT JOIN pizza_toppings_pivoted pp
-        --     ON pp.pizza_id = n.pizza_id
-        --     LEFT JOIN pizza_toppings pt
-        --     ON pt.topping_id = pp.topping_id
+         CREATE VIEW pizza AS
+             SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
+             FROM pizza_names n
+             LEFT JOIN pizza_recipes r
+             ON r.pizza_id = n.pizza_id
+             LEFT JOIN pizza_toppings_pivoted pp
+             ON pp.pizza_id = n.pizza_id
+             LEFT JOIN pizza_toppings pt
+             ON pt.topping_id = pp.topping_id
 
         -- SELECT * FROM Orders
 
@@ -710,17 +712,17 @@ Each of the following case study questions can be answered using a single SQL st
         -- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
         -- Creating extras and exclusions
-                -- CREATE VIEW extras_view AS
-                --      SELECT order_id, TRIM([value]) AS extras_id
-                --      FROM customer_orders
-                --      CROSS APPLY string_split(extras,',')
-                --      WHERE extras IS NOT NULL
+                 CREATE OR ALTER VIEW extras_view AS
+                      SELECT order_id, TRIM([value]) AS extras_id
+                      FROM customer_orders
+                      CROSS APPLY string_split(extras,',')
+                      WHERE extras IS NOT NULL
 
-                -- CREATE VIEW exclusions_view AS 
-                --      SELECT DISTINCT order_id, TRIM([value]) AS exclusions_id
-                --      FROM customer_orders
-                --      CROSS APPLY string_split(exclusions,',')
-                --      WHERE exclusions IS NOT NULL
+                 CREATE OR ALTER VIEW exclusions_view AS 
+                      SELECT DISTINCT order_id, TRIM([value]) AS exclusions_id
+                      FROM customer_orders
+                      CROSS APPLY string_split(exclusions,',')
+                      WHERE exclusions IS NOT NULL
 
                 -- DROP VIEW exclusions_view
                 -- SELECT * FROM exclusions_view
