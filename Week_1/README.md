@@ -1,5 +1,5 @@
 # 8-Week SQL Challenge
-[```Home```](adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #1 - Danny's Diner```](https://8weeksqlchallenge.com/case-study-1/)
+[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #1 - Danny's Diner```](https://8weeksqlchallenge.com/case-study-1/)
 
 ![image](https://user-images.githubusercontent.com/99233674/199024658-a1b34542-46a8-442f-913b-6b44e31cf79c.png)
 
