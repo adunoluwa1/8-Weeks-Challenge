@@ -1,13 +1,13 @@
 # 8-Week SQL Challenge - Foodie-Fi
 [```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #3 - Foodie-Fi```](https://8weeksqlchallenge.com/case-study-3/)
 
-![image](https://user-images.githubusercontent.com/99233674/199048938-2251fe07-09bb-4f61-a564-18b8a0b1f68f.png)
+![image](https://user-images.githubusercontent.com/99233674/199063943-067e748a-f933-4257-abd4-bb4e066d7a16.png)
 
 # 📕 Table of Contents
-- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#%EF%B8%8F-background-statement)
-- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#-dataset)
-- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#%EF%B8%8F-case-study-questions) 
-- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#-solutions)
+- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_3/ReadMe.md#%EF%B8%8F-background-statement)
+- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_3/ReadMe.md#-dataset)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_3/ReadMe.md#%EF%B8%8F-case-study-questions) 
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_3/ReadMe.md#-solutions)
 
 # 🛠️ Background Statement
 > Did you know that over 115 million kilograms of pizza is consumed daily worldwide??? (Well according to Wikipedia anyway…)
