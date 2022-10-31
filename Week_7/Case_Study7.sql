@@ -168,28 +168,19 @@
             -- OFFSET 0 ROW
             -- FETCH NEXT 3 ROWS ONLY
         --
-
+--
 /*          Transaction Analysis                        */
     -- How many unique transactions were there?
             SELECT COUNT(DISTINCT txn_id) AS [# Unique Transactions]
             FROM sales
     -- What is the average unique products purchased in each transaction? 
-        -- I'm not sure of the question's requirements
-        -- Group By
-            SELECT AVG(qty) [Average # Unique Products Purchased]
-            FROM
-                (SELECT COALESCE(txn_id, 'total') AS txn_id , COUNT(qty) AS qty
-                FROM sales s
-                GROUP by ROLLUP(txn_id)) Q
-            WHERE txn_id <> 'total'
-
         -- Window functions   
             SELECT DISTINCT txn_id, CONVERT(DEC(10,2), AVG(qty * 1.0) OVER(PARTITION BY txn_id)) AS [Avg Qty of Unique Products per Transaction]
             FROM sales s
             ORDER BY [Avg Qty of Unique Products per Transaction] DESC
         --
     -- What are the 25th, 50th and 75th percentile values for the revenue per transaction?
-        --25th
+        -- 25th
             -- Percent_Rank()
                 SELECT *
                 FROM
@@ -199,27 +190,21 @@
                         FROM sales) Q) S
                 WHERE percentile_rank > 0.25 AND percentile_rank < 0.26
                 
-        -- 50th Percentile_count() https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql?view=sql-server-ver16
-                SELECT DISTINCT CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
+        -- Percentile_count() https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql?view=sql-server-ver16
+                SELECT DISTINCT txn_id, 
+                       CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
                        WITHIN GROUP (ORDER BY revenue)
-                       OVER()) percentile_rank
-                FROM
-                    (SELECT DISTINCT txn_id, CONVERT(DEC(10,2),SUM(price * qty * (1-discount/100.0)) OVER(PARTITION BY txn_id)) AS revenue
-                    FROM sales) Q
-        --50th
-                SELECT DISTINCT PERCENTILE_CONT(.50)
+                       OVER(PARTITION BY txn_id)) percentile_25th,
+                       CONVERT(DEC(10,4), PERCENTILE_CONT(.50)
                        WITHIN GROUP (ORDER BY revenue)
-                       OVER() percentile_rank
-                FROM
-                    (SELECT DISTINCT txn_id, CONVERT(DEC(10,2),SUM(price * qty * (1-discount/100.0)) OVER(PARTITION BY txn_id)) AS revenue
-                    FROM sales) Q
-        --75th
-                SELECT DISTINCT PERCENTILE_CONT(.75)
+                       OVER(PARTITION BY txn_id)) percentile_50th,
+                       CONVERT(DEC(10,4), PERCENTILE_CONT(.75)
                        WITHIN GROUP (ORDER BY revenue)
-                       OVER() percentile_rank
+                       OVER(PARTITION BY txn_id)) percentile_50th
                 FROM
-                    (SELECT DISTINCT txn_id, CONVERT(DEC(10,2),SUM(price * qty * (1-discount/100.0)) OVER(PARTITION BY txn_id)) AS revenue
+                    (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), (price * qty * (1-discount/100.0))) AS revenue
                     FROM sales) Q
+                ORDER BY txn_id
     -- What is the average discount value per transaction?
         -- 
             SELECT DISTINCT txn_id, CONVERT(DEC(10,4), AVG(discount) OVER(PARTITION BY txn_id)) AS [Avg Discount Value]
@@ -291,7 +276,7 @@
             FROM sales
             GROUP BY member
             ORDER BY member
-            
+--            
 /*          Product Analysis                            */
     -- What are the top 3 products by total revenue before discount?
         -- Group By
@@ -419,20 +404,278 @@
 
 
     -- What is the percentage split of revenue by product for each segment?
-            
-            SELECT COALESCE(segment_name, 'Total') Segment,
+        -- Pivoting (Not the answer to the question. I got carried away :))
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                    FROM     
+                        (SELECT COALESCE(segment_name, 'Total') Segment,
+                            CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                        FROM sales s
+                        LEFT JOIN product_details p 
+                        ON p.product_id = s.prod_id
+                        GROUP BY segment_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Segment]
+                        IN(Jacket, Jeans, Shirt, Socks, Total)
+                    ) AS Pivot_Table)
+
+            SELECT 
+                    CONVERT(DEC(10,2), Jacket * 100.0/ Total) Jacket,
+                    CONVERT(DEC(10,2), Jeans * 100.0/ Total) Jeans,
+                    CONVERT(DEC(10,2), Shirt * 100.0/ Total) Shirt,
+                    CONVERT(DEC(10,2), Socks * 100.0/ Total) Socks
+            FROM pCTE;
+        
+        -- Using Group By     
+            SELECT Segment, Product, CONVERT(DEC(10,2),Revenue *100.0/Total) AS [Percentage]
+            FROM                
+                (SELECT DISTINCT segment_name Segment, product_name Product,
+                        CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name, product_name)) Revenue,
+                        CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name)) Total
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id) Q
+            ORDER BY Segment, [Percentage] DESC
+
+        -- Alternatively
+            SELECT Segment, Product, Revenue, 
+            CONVERT(DEC(10,2), Revenue * 100.0/(SELECT SUM(qty * s.price * (1 - discount/100.0)) 
+                                                FROM sales s 
+                                                LEFT JOIN product_details p 
+                                                ON s.prod_id = p.product_id
+                                                WHERE p.segment_name = q.Segment)) [Percentage]
+            FROM     
+               (SELECT COALESCE(segment_name, 'Total') Segment, COALESCE(product_name, 'Total') Product,
                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
-            FROM sales s
-            LEFT JOIN product_details p 
-            ON p.product_id = s.prod_id
-            GROUP BY segment_name WITH ROLLUP
-
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id
+                GROUP BY segment_name,product_name WITH ROLLUP) Q
+        --
     -- What is the percentage split of revenue by segment for each category?
-    -- What is the percentage split of total revenue by category?
-    -- What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
-    -- What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
+        -- Pivoting
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                     FROM     
+                        (SELECT COALESCE(category_name, 'Total') Category,
+                                CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         GROUP BY category_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Category]
+                        IN(Mens, Womens, Total)
+                    ) AS Pivot_Table)
+            -- 
+            SELECT 
+                CONCAT(CONVERT(DEC(10,2), Mens * 100.0/ Total),'%') Men,
+                CONCAT(CONVERT(DEC(10,2), Womens * 100.0/ Total),'%') Women
+            FROM pCTE;
 
-            SELECT *
+        -- Using Window Functions     
+            SELECT Category, Segment, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Percentage]
+            FROM                
+                (SELECT DISTINCT category_name Category, segment_name Segment,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name, segment_name)) Revenue,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Total
+                 FROM sales s
+                 LEFT JOIN product_details p 
+                 ON p.product_id = s.prod_id) Q
+            ORDER BY Category;
+
+        -- Alternatively
+            SELECT Category, Segment, Revenue, 
+            CONVERT(DEC(10,2), Revenue *100.0/(SELECT SUM(qty * s.price * (1 - discount/100.0))
+                                               FROM sales s
+                                               LEFT JOIN product_details p
+                                               ON s.prod_id = p.product_id
+                                               WHERE Q.Category = p.category_name)) [Percentage]
+            FROM
+                (SELECT COALESCE(category_name, 'Total') Category, 
+                    COALESCE(segment_name, 'Total') Segment, 
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                 FROM sales s
+                 LEFT JOIN product_details p 
+                 ON p.product_id = s.prod_id
+                 GROUP BY category_name, segment_name WITH ROLLUP) Q;
+            --
+        --
+    -- What is the percentage split of total revenue by category?
+        -- Pivoting
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                     FROM     
+                        (SELECT COALESCE(category_name, 'Total') Category,
+                                CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         GROUP BY category_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Category]
+                        IN(Mens, Womens, Total)
+                    ) AS Pivot_Table)
+            -- 
+            SELECT 
+                CONCAT(CONVERT(DEC(10,2), Mens * 100.0/ Total),'%') Men,
+                CONCAT(CONVERT(DEC(10,2), Womens * 100.0/ Total),'%') Women
+            FROM pCTE;
+
+        -- Using Group By     
+            SELECT Category, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Percentage]
+            FROM                
+                (SELECT DISTINCT category_name Category,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Revenue,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER()) Total
+                 FROM sales s
+                 LEFT JOIN product_details p 
+                 ON p.product_id = s.prod_id) Q;
+
+        --   
+    -- What is the total transaction “penetration” for each product? 
+        -- (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
+        SELECT Product, CONVERT(DEC(10,3), txns * 100.0/total)[Penetration]
+        FROM    
+            (SELECT product_name Product, COUNT(txn_id) AS txns, (SELECT COUNT(DISTINCT txn_id) FROM sales) total 
             FROM sales s
             LEFT JOIN product_details p 
             ON p.product_id = s.prod_id
+            GROUP BY product_name) Q
+        ORDER BY Penetration DESC
+    -- What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
+--
+/*         Reporting Challenge                        */
+    -- Questions
+        -- Write a single SQL script that combines all of the previous questions into a scheduled report that the 
+        -- Balanced Tree team can run at the beginning of each month to calculate the previous month’s values.
+        -- He first wants you to generate the data for January only -
+        -- but then he also wants you to demonstrate that you can easily run the samne analysis for February without many changes (if at all).
+    --
+    -- Stored Procedure for Report 1
+        -- CREATE OR ALTER PROCEDURE Report1 @month NVARCHAR(10), @member NVARCHAR(10) AS 
+        --     WITH 
+        --         penetration AS
+        --          (SELECT Product, ID, CONCAT(CONVERT(DEC(10,3), txns * 100.0/total),'%') [Penetration]
+        --          FROM    
+        --             (SELECT product_name Product, prod_id ID, COUNT(txn_id) AS txns, (SELECT COUNT(DISTINCT txn_id) FROM sales) total 
+        --             FROM sales s
+        --             LEFT JOIN product_details p 
+        --             ON p.product_id = s.prod_id
+        --             WHERE DATENAME(MM,start_txn_time) = @month
+        --             AND member = @member
+        --             GROUP BY product_name, prod_id) Q),
+        --         percent_prod AS
+        --          (SELECT Segment, Product, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Product Percentage]
+        --           FROM                
+        --             (SELECT DISTINCT segment_name Segment, product_name Product,
+        --                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name, product_name)) Revenue,
+        --                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name)) Total
+        --             FROM sales s
+        --             LEFT JOIN product_details p 
+        --             ON p.product_id = s.prod_id
+        --             WHERE DATENAME(MM,start_txn_time) = @month
+        --             AND member = @member) Q),
+        --         percent_segment AS
+        --          (SELECT Category, Segment, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Segment Percentage]
+        --          FROM                
+        --                 (SELECT DISTINCT category_name Category, segment_name Segment,
+        --                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name, segment_name)) Revenue,
+        --                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Total
+        --                 FROM sales s
+        --                 LEFT JOIN product_details p 
+        --                 ON p.product_id = s.prod_id
+        --                 WHERE DATENAME(MM,start_txn_time) = @month
+        --                 AND member = @member) Q),
+        --         percent_category AS
+        --          (SELECT Category, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Category Percentage]
+        --          FROM                
+        --             (SELECT DISTINCT category_name Category,
+        --                 CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Revenue,
+        --                 CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER()) Total
+        --                 FROM sales s
+        --                 LEFT JOIN product_details p 
+        --                 ON p.product_id = s.prod_id
+        --                 WHERE DATENAME(MM,start_txn_time) = @month
+        --                 AND member = @member) Q)
+        --     --
+        --     SELECT  DISTINCT category_name, [Category Percentage],
+        --                     segment_name, [Segment Percentage], 
+        --                     product_name, [Product Percentage], penetration,
+        --             SUM(qty) OVER(PARTITION BY prod_id) AS quantity_sold,
+        --             SUM(s.qty * s.price) OVER(PARTITION BY prod_id) AS revenue_before_discount,
+        --             CAST(SUM(s.qty * s.price * s.discount/100.0) OVER(PARTITION BY prod_id) AS DEC(10,2)) AS discount,
+        --             CAST(SUM(s.qty * s.price * (1- s.discount/100.0)) OVER(PARTITION BY prod_id) AS DEC(10,2)) AS revenue                       
+        --     FROM sales s
+        --     LEFT JOIN product_details d
+        --         ON d.product_id = s.prod_id
+        --     LEFT JOIN penetration p
+        --         ON p.ID = s.prod_id
+        --     LEFT JOIN percent_prod pp
+        --         ON pp.Product = p.Product
+        --     LEFT JOIN percent_category pc
+        --         ON pc.Category = d.category_name
+        --     LEFT JOIN percent_segment ps
+        --         ON ps.Category = d.category_name AND ps.Segment = d.segment_name
+        --     WHERE DATENAME(MM,start_txn_time) = @month
+        --      AND member = @member
+        --     ORDER BY segment_name
+
+        -- GO;
+    --
+    -- Stored procedure for Report 2
+        --
+        -- CREATE OR ALTER PROCEDURE Report2 @month NVARCHAR(10)
+        -- AS
+        --     WITH 
+        --         Percentiles AS
+        --             (SELECT DISTINCT txn_id, 
+        --                CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
+        --                WITHIN GROUP (ORDER BY revenue)
+        --                OVER(PARTITION BY txn_id)) percentile_25th,
+        --                CONVERT(DEC(10,4), PERCENTILE_CONT(.50)
+        --                WITHIN GROUP (ORDER BY revenue)
+        --                OVER(PARTITION BY txn_id)) percentile_50th,
+        --                CONVERT(DEC(10,4), PERCENTILE_CONT(.75)
+        --                WITHIN GROUP (ORDER BY revenue)
+        --                OVER(PARTITION BY txn_id)) percentile_75th
+        --             FROM
+        --                 (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), (price * qty * (1-discount/100.0))) AS revenue
+        --                 FROM sales
+        --                 WHERE DATENAME(MM,start_txn_time) = @month) Q),
+        --         Avg_discount AS
+        --             (SELECT DISTINCT txn_id, 
+        --              CONVERT(DEC(10,4), AVG(discount) OVER(PARTITION BY txn_id)) AS [Avg Discount Value]
+        --              FROM sales
+        --              WHERE DATENAME(MM,start_txn_time) = @month),
+        --         Unique_transactions AS
+        --             (SELECT COUNT(DISTINCT txn_id) AS [# Unique Transactions]
+        --              FROM sales
+        --              WHERE DATENAME(MM,start_txn_time) = @month),
+        --         Avg_Unique_Products AS
+        --             (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), AVG(qty * 1.0) 
+        --              OVER(PARTITION BY txn_id)) AS [Avg Unique Products]
+        --              FROM sales s
+        --              WHERE DATENAME(MM,start_txn_time) = @month)
+        --     --
+        --     SELECT *
+        --     FROM
+        --         (SELECT p.txn_id, percentile_25th, percentile_50th, percentile_75th, [Avg Discount Value],[Avg Unique Products] --[# Unique Transactions]
+        --          FROM Percentiles p
+        --          LEFT JOIN Avg_discount a
+        --          ON a.txn_id = p.txn_id
+        --          LEFT JOIN Avg_Unique_Products u
+        --          ON u.txn_id = p.txn_id) Q
+        -- GO;   
+    --
+    EXEC Report1 @month = 'February', @member = 't'
+    EXEC Report2 @month = 'February'
