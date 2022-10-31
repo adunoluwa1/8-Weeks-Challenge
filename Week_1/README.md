@@ -55,7 +55,7 @@ This case study has 3 key datasets
 
 
 
-# ✒️♂️Case Study Questions
+# ✒️ Case Study Questions
 Each of the following case study questions can be answered using a single SQL statement:
 
 1. What is the total amount each customer spent at the restaurant?
