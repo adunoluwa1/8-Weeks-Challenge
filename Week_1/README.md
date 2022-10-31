@@ -8,7 +8,7 @@ https://8weeksqlchallenge.com/case-study-1/
 # 📕 Table of Contents
 - 🛠️ Problem Statement
 - 📂 Dataset
-- 🧙‍ Case Study Questions
+- 🧙‍ [Case Study Questions] (https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/edit/main/Week_1/README.md#%EF%B8%8Fcase-study-questions) 
 - 🚀 Solutions
 
 # 🛠️ Problem Statement
@@ -51,7 +51,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 1. Total amount spent by each customer
 
-```
+```sql
     --Using Joins
         SELECT s.customer_id, SUM(m.price) AS [Amount Spent]
         FROM sales s
@@ -77,7 +77,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 2. Days each customer visited the restaurant
 
-```
+```sql
     --Using Nested subquery
         SELECT s.customer_id, 
                COUNT(order_date)  AS [Number of Days]
@@ -93,7 +93,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 3. First item from the menu purchased by each customer
 
-```
+```sql
     --Using Joins
         SELECT DISTINCT s.customer_id, m.product_name
         FROM sales s
@@ -117,7 +117,7 @@ Each of the following case study questions can be answered using a single SQL st
 ```
 4. Most purchased item and number of times it was purchased
 
-```
+```sql
     --Using Window Functions
         SELECT sq.product_name,sq.[Number of Orders], RANK() OVER(ORDER BY sq.[Number of Orders] DESC) AS Rank
         FROM
@@ -139,7 +139,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 5. Most popular item for each customer
 
-```
+```sql
     --Using Window Functions
     
         SELECT *
@@ -165,7 +165,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 6. First item purchased after becoming a member
 
-```
+```sql
     --Using correlated subquery method
         SELECT DISTINCT sq.customer_id, sq.date_diff, m.product_name
         FROM
@@ -209,7 +209,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 7. Last item purchased just before becoming a member
 
-```
+```sql
     -- One Method
         SELECT DISTINCT sq.customer_id, m.product_name
         FROM
@@ -254,7 +254,7 @@ Each of the following case study questions can be answered using a single SQL st
 
 Q8. Total items and amount spent for each member before becoming a member
 
-```
+```sql
     --Using Joins and Window Functions
         SELECT DISTINCT s.customer_id, m.product_name, 
                SUM(m.price) OVER(PARTITION BY m.product_name, s.customer_id) AS [Total Cost]
@@ -291,7 +291,7 @@ Q8. Total items and amount spent for each member before becoming a member
 
 9. $1 = 10 points and sushi = 2x multiplier calculate each members points
 
-```
+```sql
     --Using Case statements
         SELECT sq.customer_id, SUM(sq.price * sq.multiplier * 10) AS Points  
         FROM
@@ -308,7 +308,7 @@ Q8. Total items and amount spent for each member before becoming a member
 
 10. 2x on all items in the first week of joining
 
-```
+```sql
     --Using case statements
         SELECT sq.customer_id, SUM(sq.price * sq.[membership multiplier] * 10) AS Points  
         FROM
@@ -332,7 +332,7 @@ Q8. Total items and amount spent for each member before becoming a member
 
 - Bonus Questions
 
-```
+```sql
     -- CREATE VIEW [Total] AS
     SELECT s.customer_id, s.order_date, mn.product_name, mn.price, 
             CASE
