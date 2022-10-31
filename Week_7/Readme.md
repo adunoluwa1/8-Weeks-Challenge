@@ -116,7 +116,7 @@ Each question can be answered using a single query - but as you are writing the 
   <details><summary>View solution</summary>
   <p>
   
-- High Level Sales Analysis
+#### High Level Sales Analysis
 
   1. What was the total quantity sold for all products?
 
@@ -197,7 +197,7 @@ Each question can be answered using a single query - but as you are writing the 
             -- FETCH NEXT 3 ROWS ONLY
 ```
 
-- Transaction Analysis
+#### Transaction Analysis
 
   1. How many unique transactions were there?
 
@@ -315,7 +315,7 @@ Each question can be answered using a single query - but as you are writing the 
             ORDER BY member
 ```
 
-- Product Analysis
+#### Product Analysis
 
   1. What are the top 3 products by total revenue before discount?
   
@@ -618,7 +618,7 @@ Each question can be answered using a single query - but as you are writing the 
   
   10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction? **
 
-- Reporting Challenge
+#### Reporting Challenge
   
   ```sql
     -- Questions
@@ -745,8 +745,10 @@ Each question can be answered using a single query - but as you are writing the 
     --
     EXEC Report1 @month = 'February', @member = 't'
     EXEC Report2 @month = 'February'
---
-/*              Bonus Challenge                         */
+  ```
+#### Bonus Challenge
+  
+  ```sql
     -- Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table.
     -- Hint: you may want to consider using a recursive CTE to solve this problem!
 
