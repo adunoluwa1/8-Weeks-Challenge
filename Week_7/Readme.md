@@ -6,10 +6,10 @@
 ![image](https://user-images.githubusercontent.com/99233674/199073414-24c4102f-8f01-47bc-adfe-63ee20ad40cf.png)
 
 # 📕 Table of Contents
-- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#%EF%B8%8F-background-statement)
-- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#-dataset)
-- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#%EF%B8%8F-case-study-questions) 
-- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_2#-solutions)
+- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#%EF%B8%8F-background-statement)
+- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#-dataset)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#%EF%B8%8F-case-study-questions) 
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#-solutions)
 
 # 🛠️ Background Statement
 > Did you know that over 115 million kilograms of pizza is consumed daily worldwide??? (Well according to Wikipedia anyway…)
