@@ -11,8 +11,18 @@ https://8weeksqlchallenge.com/case-study-1/
 - 🧙‍ Case Study Questions
 - 🚀 Solutions
 
+# 📂 Dataset
+This case study has 3 key datasets 
+- sales
+- menu
+- members
+
+
+
+
+
 # 🧙‍♂️Case Study Questions
-Each of the following case study questions can be answered using a single SQL statement:
+> Each of the following case study questions can be answered using a single SQL statement:
 
 1. What is the total amount each customer spent at the restaurant?
 2. How many days has each customer visited the restaurant?
@@ -26,4 +36,4 @@ Each of the following case study questions can be answered using a single SQL st
 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 ## Bonus Questions
-Danny also requires further information about the ranking of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
+> Danny also requires further information about the ranking of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
