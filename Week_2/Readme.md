@@ -321,8 +321,7 @@ Each of the following case study questions can be answered using a single SQL st
 
         -- Using Subqueries in WHERE clause & Order view
 
-            -- DROP VIEW Orders
-            -- CREATE VIEW Orders AS 
+            -- CREATE OR ALTER VIEW Orders AS 
             --     SELECT c.order_id,
             --         c.customer_id,
             --         c.pizza_id,
@@ -600,8 +599,8 @@ Each of the following case study questions can be answered using a single SQL st
   
 ```sql
   -- 0. Creating view for toppings id 
-        https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
-        DROP VIEW pizza_toppings_pivoted 
+        -- https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
+        -- DROP VIEW pizza_toppings_pivoted 
 
          CREATE OR ALTER VIEW pizza_toppings_pivoted AS
              SELECT pizza_id,TRIM([value]) AS topping_id
