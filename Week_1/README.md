@@ -51,26 +51,50 @@ Each of the following case study questions can be answered using a single SQL st
 
 1. Total amount spent by each customer
 
++ Using Joins
 ```
-    --Using Joins
         SELECT s.customer_id, SUM(m.price) AS [Amount Spent]
         FROM sales s
         LEFT JOIN menu m
         ON m.product_id = s.product_id
         GROUP BY s.customer_id
-
-    --Alternatively - Using Correlated Subquery
+```
++ Alternatively - Using Correlated Subquery
+    
+```
         SELECT  DISTINCT  s1.customer_id, 
                 (SELECT SUM(m.price)
                 FROM menu m, sales s2
                 WHERE s1.customer_id = s2.customer_id AND s2.product_id = m.product_id) AS [Amount Spent]
         FROM sales s1
+```
++ Alternatively - Using Window Functions
 
-    --Alternatively - Using Window Functions
+```
         SELECT DISTINCT s.customer_id,
                 SUM(m.price) OVER(PARTITION BY s.customer_id) AS [Amount Spent]
         FROM sales s
         LEFT JOIN menu m
         ON m.product_id = s.product_id
         ORDER BY [Amount Spent] DESC
+```
+2. Days each customer visited the restaurant
+
+
++ Using Nested subquery
+```
+        SELECT s.customer_id, 
+               COUNT(order_date)  AS [Number of Days]
+        FROM sales s
+        GROUP BY s.customer_id
+```
+
++ Using correlated subquery
+```
+        SELECT DISTINCT  s.customer_id,
+                (SELECT COUNT(DISTINCT s1.order_date)
+                 FROM sales s1
+                 WHERE s.customer_id = s1.customer_id) AS [Number of Days]
+        FROM sales s
+        -- GROUP BY s.customer_id
 ```
