@@ -801,7 +801,7 @@ Each of the following case study questions can be answered using a single SQL st
 
   - D. Pricing and Ratings
   
-```
+```sql
     -- 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
         -- Total without grouping by pizza type 
             SELECT SUM(s.Revenue)
