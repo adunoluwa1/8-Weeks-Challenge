@@ -12,155 +12,104 @@
 - [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#-solutions)
 
 # 🛠️ Background Statement
-> Did you know that over 115 million kilograms of pizza is consumed daily worldwide??? (Well according to Wikipedia anyway…)
+> Balanced Tree Clothing Company prides themselves on providing an optimised range of clothing and lifestyle wear for the modern adventurer!
 
-> Danny was scrolling through his Instagram feed when something really caught his eye - “80s Retro Styling and Pizza Is The Future!”
-
-> Danny was sold on the idea, but he knew that pizza alone was not going to help him get seed funding to expand his new Pizza Empire - so he had one more genius idea to combine with it - he was going to Uberize it - and so Pizza Runner was launched!
-
-> Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runner Headquarters (otherwise known as Danny’s house) and also maxed out his credit card to pay freelance developers to build a mobile app to accept orders from customers.
+> Danny, the CEO of this trendy fashion company has asked you to assist the team’s merchandising teams analyse their sales performance and generate a basic financial report to share with the wider business.
 
 # 📂 Dataset
-This case study has 3 key datasets 
+For this case study there is a total of 4 datasets for this case study. However you will only need to utilise 2 main tables to solve all of the regular questions.
+
 <details><summary>View Datasets</summary>
   <p>
 
-- runners
+- Product Details
   <details><summary>View table</summary>
     <p>
   
   ```
-  Runners table
+  Product Details table
   ```
     </p>
   </details>
 
-- Customer Orders
+- Product Sales
 
   <details><summary>View table</summary>
     <p>
   
     ```
-    Customer Orders table
+    Product Sales table
     ```
     </p>
   </details>
 
-- Runner Orders
+- Product Hierarcy
 
   <details><summary>View table</summary>
     <p>
     
     ```
-    Runner Orders table
+    Product Hierarcy table
     ```
     </p>
   </details>
 
-- Pizza Names
+- Product Price
 
   <details><summary>View table</summary>
     <p>
   
     ```
-    Pizza Names table
+    Product Price table
     ```
     </p>
   </details>
-
-- Pizza Recipes
-  
-  <details><summary>View table</summary>
-    <p>
-  
-    ```
-    Pizza Recipes table
-    ```
-  
-    </p>
-  </details>
-
-- Pizza Toppings
-
-  <details><summary>View table</summary>
-    <p>
-  
-    ```
-    Pizza Toppings table
-    ```
-  
-    </p>
-  </details>
-  
+ 
   </p>
 </details>
   
   
 # ✒️ Case Study Questions
-This case study has LOTS of questions - they are broken up by area of focus including:
-- Pizza Metrics
-- Runner and Customer Experience
-- Ingredient Optimisation
-- Pricing and Ratings
-- Bonus DML Challenges (DML = Data Manipulation Language)
-Each of the following case study questions can be answered using a single SQL statement.
+The following questions can be considered key business questions and metrics that the Balanced Tree team requires for their monthly reports.
 
-## A. Pizza Metrics
-   1. How many pizzas were ordered?
-   2. How many unique customer orders were made?
-   3. How many successful orders were delivered by each runner?
-   4. How many of each type of pizza was delivered?
-   5. How many Vegetarian and Meatlovers were ordered by each customer?
-   6. What was the maximum number of pizzas delivered in a single order?
-   7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
-   8. How many pizzas were delivered that had both exclusions and extras?
-   9. What was the total volume of pizzas ordered for each hour of the day?
-   10. What was the volume of orders for each day of the week?
+Each question can be answered using a single query - but as you are writing the SQL to solve each individual problem, keep in mind how you would generate all of these metrics in a single SQL script which the Balanced Tree team can run each month.
 
-## B. Runner and Customer Experience
-   1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
-   2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
-   3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
-   4. What was the average distance travelled for each customer?
-   5. What was the difference between the longest and shortest delivery times for all orders?
-   6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
-   7. What is the successful delivery percentage for each runner?
+## High Level Sales Analysis
+   1. What was the total quantity sold for all products?
+   2. What is the total generated revenue for all products before discounts?
+   3. What was the total discount amount for all products?
+
+## Transaction Analysis
+   1. How many unique transactions were there?
+   2. What is the average unique products purchased in each transaction?
+   3. What are the 25th, 50th and 75th percentile values for the revenue per transaction?
+   4. What is the average discount value per transaction?
+   5. What is the percentage split of all transactions for members vs non-members?
+   6. What is the average revenue for member transactions and non-member transactions?
    
-## C. Ingredient Optimisation
-   1. What are the standard ingredients for each pizza?
-   2. What was the most commonly added extra?
-   3. What was the most common exclusion?
-   4. Generate an order item for each record in the customers_orders table in the format of one of the following:
-      - Meat Lovers
-      - Meat Lovers - Exclude Beef
-      - Meat Lovers - Extra Bacon
-      - Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
-   5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
-      - For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
-   6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
+## Product Analysis
+   1. What are the top 3 products by total revenue before discount?
+   2. What is the total quantity, revenue and discount for each segment?
+   3. What is the top selling product for each segment?
+   4. What is the total quantity, revenue and discount for each category?
+   5. What is the top selling product for each category?
+   6. What is the percentage split of revenue by product for each segment?
+   7. What is the percentage split of revenue by segment for each category?
+   8. What is the percentage split of total revenue by category?
+   9. What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
+   10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
 
-## D. Pricing and Ratings
-   1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes 
-      - how much money has Pizza Runner made so far if there are no delivery fees?
-   2. What if there was an additional $1 charge for any pizza extras?
-      - Add cheese is $1 extra
-   3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset 
-      - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
-   4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
-      - customer_id
-      - order_id
-      - runner_id
-      - rating
-      - order_time
-      - pickup_time
-      - Time between order and pickup
-      - Delivery duration
-      - Average speed
-      - Total number of pizzas
-   5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+## Reporting Challenge
+  > Write a single SQL script that combines all of the previous questions into a scheduled report that the Balanced Tree team can run at the beginning of each month to calculate the previous month’s values.
+  
+  > Imagine that the Chief Financial Officer (which is also Danny) has asked for all of these questions at the end of every month.
+  
+  > He first wants you to generate the data for January only - but then he also wants you to demonstrate that you can easily run the samne analysis for February without many changes (if at all).
+  
+  > Feel free to split up your final outputs into as many tables as you need - but be sure to explicitly reference which table outputs relate to which question for full marks :)
    
 ## Bonus Questions
-> If Danny wants to expand his range of pizzas - how would this impact the existing data design? Write an INSERT statement to demonstrate what would happen if a new Supreme pizza with all the toppings was added to the Pizza Runner menu?
+  > Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table. Hint: you may want to consider using a recursive CTE to solve this problem!
 
 
 # 🏆 Solutions
