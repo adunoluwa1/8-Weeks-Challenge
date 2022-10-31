@@ -116,742 +116,657 @@ Each question can be answered using a single query - but as you are writing the 
   <details><summary>View solution</summary>
   <p>
   
-   - Data Cleanup
-   ```sql
--- NB: Never edit DB tables directly, rather make duplicates and perform data cleaning
-    -- Customer Orders Table
-        UPDATE customer_orders
-        SET exclusions = NULL
-        WHERE exclusions LIKE '%null%' OR exclusions = ''
+- High Level Sales Analysis
 
-        UPDATE customer_orders
-        SET extras = NULL
-        WHERE extras LIKE '%null%' OR extras = ''
-
-    -- Runner Orders Table
-        -- Set Null values
-            UPDATE runner_orders
-            SET pickup_time = NULL, distance = NULL, duration = NULL
-            WHERE cancellation LIKE '%Cancellation%';
-
-
-            UPDATE runner_orders
-            SET cancellation = NULL
-            WHERE cancellation NOT LIKE '%Cancellation%'
-        -- Removed km and minute symbols
-            UPDATE runner_orders
-            SET distance = TRIM(SUBSTRING(distance,1,CHARINDEX('k',distance)-1))
-            WHERE distance LIKE '%km%'
-
-            UPDATE runner_orders
-            SET duration = TRIM(SUBSTRING(duration,1,CHARINDEX('m',duration)-1))
-            WHERE duration LIKE '%min%'
-        -- Changed Data Type
-            ALTER TABLE runner_orders
-            ALTER COLUMN distance DEC(24,1)
-            
-            ALTER TABLE runner_orders
-            ALTER COLUMN duration DEC(24,1)
-    
-    -- Pizza Name Table
-        ALTER TABLE pizza_names
-        ALTER COLUMN pizza_name VARCHAR(30)
-    
-    -- Pizza Recipes
-        ALTER TABLE pizza_recipes
-        ALTER COLUMN toppings VARCHAR(30)
-    
-    -- Pizza Toppings
-        ALTER TABLE pizza_toppings
-        ALTER COLUMN topping_name VARCHAR(30)
-```
-
-  - A. Pizza Metrics
+  1. What was the total quantity sold for all products?
 
 ```sql
-    -- 1. How many pizzas were ordered?
-        SELECT COUNT(*) AS [Number of Orders]
-        FROM customer_orders
+          -- Window functions
+            SELECT DISTINCT product_name, SUM(qty) OVER(PARTITION BY prod_id) AS quantity_sold
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            ORDER BY quantity_sold DESC
+        -- Group by
+            SELECT product_name, SUM(qty) AS quantity_sold
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY product_name
+            ORDER BY quantity_sold DESC
+        -- Correlated subqueries
+            SELECT product_name,
+                   (SELECT SUM(qty)
+                    FROM sales s
+                    WHERE p.product_id = s.prod_id) AS quantity_sold
+            FROM product_details p
+            ORDER BY quantity_sold DESC
+```
 
-    -- 2. How many unique customer orders were made?
-        SELECT COUNT(*) AS [Number of Distinct Orders]
-        FROM (SELECT DISTINCT * 
-              FROM customer_orders) AS sq
-    -- 3. How many successful orders were delivered by each runner?
-        -- Using Group By
-            SELECT runner_id, COUNT (order_id) AS [Successful Orders]
-            FROM runner_orders
-            WHERE cancellation IS NULL
-            GROUP BY runner_id
+  2. What is the total generated revenue for all products before discounts?
+  
+```sql
+        -- Group By
+            SELECT product_name, SUM(s.qty * s.price) AS revenue
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY product_name
+            ORDER BY revenue DESC
+        
+        -- Window functions
+            SELECT DISTINCT product_name, SUM(s.qty * s.price) OVER(PARTITION BY prod_id) AS revenue
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            ORDER BY revenue DESC
+        -- Correlated Subqueries
+            SELECT product_name, (SELECT SUM(s.qty * s.price)
+                                  FROM sales s
+                                  WHERE p.product_id = s.prod_id) AS revenue
+            FROM product_details p
+            ORDER BY revenue DESC 
+            -- OFFSET 0 ROW
+            -- FETCH NEXT 3 ROWS ONLY
+```
 
-        -- Using window function
-            SELECT DISTINCT runner_id, COUNT(order_id) OVER(PARTITION BY runner_id) AS [Successful Orders]
-            FROM runner_orders
-            WHERE cancellation IS NULL
+  3. What was the total discount amount for all products?
 
-        -- Using correlated subqueries
-            SELECT DISTINCT r.runner_id, (SELECT COUNT(*)
-                                        FROM runner_orders ro
-                                        WHERE ro.runner_id = r.runner_id AND ro.cancellation IS NULL)  AS [Successful Orders]
-            FROM runner_orders r
-    
-    -- 4. How many of each type of pizza was delivered?
-        -- Using Group BY
-            SELECT c.pizza_id, 
-                   COUNT(c.order_id) AS [# of Pizza Delivered]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE cancellation IS NULL
-            GROUP BY c.pizza_id
+```sql
+        -- Group By
+            SELECT product_name, CONVERT(DEC(10,2),SUM(s.qty * s.price * s.discount/100.0)) AS discount
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY product_name
+            ORDER BY discount DESC
+        
+        -- Window functions
+            SELECT DISTINCT product_name, CAST(SUM(s.qty * s.price * s.discount/100.0) OVER(PARTITION BY prod_id) AS DEC(10,2)) AS discount
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            ORDER BY discount DESC
+        -- Correlated Subqueries
+            SELECT product_name, (SELECT ROUND(SUM(s.qty * s.price * s.discount/100.0),2)
+                                  FROM sales s
+                                  WHERE p.product_id = s.prod_id) AS discount
+            FROM product_details p
+            ORDER BY discount DESC 
+            -- OFFSET 0 ROW
+            -- FETCH NEXT 3 ROWS ONLY
+```
 
-        -- Using window functions
-            SELECT DISTINCT c.pizza_id,
-                            COUNT(c.order_id) OVER(PARTITION BY c.pizza_id)  AS [# of Pizza Delivered]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE r.cancellation IS NULL
+- Transaction Analysis
 
-        -- Using correlated subqueries
-            SELECT DISTINCT c.pizza_id, (SELECT COUNT(co.order_id)
-                                         FROM customer_orders co
-                                         LEFT JOIN runner_orders r
-                                         ON co.order_id=r.order_id
-                                         WHERE co.pizza_id = c.pizza_id
-                                         AND r.cancellation IS NULL) AS [# of Pizza Delivered]
-            FROM customer_orders c
-    -- 5. How many Vegetarian and Meatlovers were ordered by each customer?
-        -- Using Group By
-            SELECT p.pizza_name, COUNT(c.order_id) AS [Number of Orders]
-            FROM customer_orders c
-            LEFT JOIN pizza_names p
-            ON p.pizza_id = c.pizza_id
-            GROUP BY p.pizza_name
+  1. How many unique transactions were there?
 
-        -- Using window functions
-            SELECT DISTINCT p.pizza_name, COUNT(c.order_id) OVER(PARTITION BY p.pizza_name) AS [Number of Orders]
-            FROM customer_orders c
-            LEFT JOIN pizza_names p
-            ON p.pizza_id = c.pizza_id
+```sql
+            SELECT COUNT(DISTINCT txn_id) AS [# Unique Transactions]
+            FROM sales
+```
 
-        -- Using correlated subqueries
-            SELECT DISTINCT p.pizza_name, (SELECT COUNT(*)
-                                           FROM customer_orders c
-                                           LEFT JOIN pizza_names pn
-                                           ON pn.pizza_id = c.pizza_id
-                                           WHERE p.pizza_name = pn.pizza_name)
-                                           AS [Number of Orders]
-            FROM pizza_names p
+  2. What is the average unique products purchased in each transaction?
 
-    -- 6. What was the maximum number of pizzas delivered in a single order? VIEW CREATION
-        -- Using Group By
-            SELECT q.order_id, q.[Number of Pizzas]
-            FROM
-                (SELECT *, RANK() OVER(ORDER BY sq.[Number of Pizzas] DESC) AS Ranking
-                FROM 
-                    (SELECT c.order_id, COUNT(*) AS [Number of Pizzas]
-                    FROM customer_orders c
-                    LEFT JOIN runner_orders r
-                    ON c.order_id = r.order_id
-                    WHERE r.cancellation IS NULL
-                    GROUP BY c.order_id) AS sq) AS q
-            WHERE q.Ranking = 1
-            
-        -- Using Window Functions
-            SELECT q.order_id, q.[Number of Pizzas]
-            FROM
-                (SELECT *, RANK() OVER(ORDER BY sq.[Number of Pizzas] DESC) AS Ranking
+```sql
+        -- Window functions   
+            SELECT DISTINCT txn_id, CONVERT(DEC(10,2), AVG(qty * 1.0) OVER(PARTITION BY txn_id)) AS [Avg Qty of Unique Products per Transaction]
+            FROM sales s
+            ORDER BY [Avg Qty of Unique Products per Transaction] DESC
+        --
+    -- What are the 25th, 50th and 75th percentile values for the revenue per transaction?
+        -- 25th
+            -- Percent_Rank()
+                SELECT *
                 FROM
-                    (SELECT DISTINCT c.order_id, COUNT(*) OVER(PARTITION BY c.order_id) AS [Number of Pizzas]
-                    FROM customer_orders c
-                    LEFT JOIN runner_orders r
-                    ON c.order_id = r.order_id
-                    WHERE r.cancellation IS NULL) AS sq) AS q
-            WHERE q.Ranking = 1
-
-        -- Using Subqueries in WHERE clause & Order view
-
-            -- CREATE OR ALTER VIEW Orders AS 
-            --     SELECT c.order_id,
-            --         c.customer_id,
-            --         c.pizza_id,
-            --         c.order_time,
-            --         c.exclusions,
-            --         c.extras,
-            --         r.runner_id,
-            --         r.pickup_time,
-            --         r.distance,
-            --         r.duration,
-            --         r.cancellation
-            --     FROM customer_orders c
-            --     LEFT JOIN runner_orders r
-            --     ON c.order_id = r.order_id
-            
-            --
-            SELECT *
-            FROM
-                (SELECT order_id, COUNT(customer_id) AS [#]
-                FROM Orders o
-                WHERE cancellation IS NULL
-                GROUP BY order_id) AS q
-            WHERE q.# = (SELECT MAX(s.count) AS [Count]
-                         FROM (SELECT o1.order_id, COUNT(o1.customer_id) AS [Count]
-                               FROM Orders o1
-                               GROUP BY o1.order_id) AS s)
-            
-
-    -- 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
-        -- Using Group By
-            SELECT DISTINCT c.customer_id, COUNT(*) AS [One Change] 
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE (c.exclusions IS NULL OR c.extras IS NULL) 
-            AND r.cancellation IS NULL
-            GROUP BY c.customer_id
-
-            SELECT DISTINCT c.customer_id, COUNT(*) AS [No Change]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE c.exclusions IS NULL AND c.extras IS NULL 
-            AND r.cancellation IS NULL
-            GROUP BY c.customer_id
-
-        -- Using window functions
-            SELECT DISTINCT c.customer_id, COUNT(*) OVER(PARTITION BY c.customer_id) AS [One Change]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE (c.exclusions IS NULL OR c.extras IS NULL)
-            AND r.cancellation IS NULL
-
-            SELECT DISTINCT c.customer_id, COUNT(*) OVER(PARTITION BY c.customer_id) AS [No Change]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE c.exclusions IS NULL AND c.extras IS NULL 
-            AND r.cancellation IS NULL
-        -- Using Correlated Subqueries
-            SELECT DISTINCT co.customer_id, (SELECT COUNT(c1.order_id)
-                                            FROM customer_orders c1 
-                                            LEFT JOIN runner_orders r1
-                                            ON c1.order_id = r1.order_id
-                                            WHERE r1.cancellation IS NULL
-                                            AND co.customer_id = c1.customer_id
-                                            AND (c1.exclusions IS NULL OR c1.extras IS NULL)) AS [One Change],
-                                            (SELECT COUNT(c2.order_id)
-                                            FROM customer_orders c2 
-                                            LEFT JOIN runner_orders r2
-                                            ON c2.order_id = r2.order_id
-                                            WHERE c2.exclusions IS NULL AND c2.extras IS NULL
-                                            AND c2.customer_id = co.customer_id
-                                            AND r2.cancellation IS NULL) AS [No Change]
-            FROM customer_orders co
-    
-
-    -- 8. How many pizzas were delivered that had both exclusions and extras?
-        -- Using Group By
-            SELECT DISTINCT c.customer_id, COUNT(*) AS [No Change]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE c.exclusions IS NOT NULL AND c.extras IS NOT NULL 
-            AND r.cancellation IS NULL
-            GROUP BY c.customer_id
-
-        -- Using window functions
-            SELECT DISTINCT c.customer_id, COUNT(*) OVER(PARTITION BY c.customer_id) AS [No Change]
-            FROM customer_orders c
-            LEFT JOIN runner_orders r
-            ON c.order_id = r.order_id
-            WHERE c.exclusions IS NOT NULL AND c.extras IS NOT NULL 
-            AND r.cancellation IS NULL
-
-        --using correlated subqueries
-            SELECT DISTINCT co.customer_id, (SELECT COUNT(c2.order_id)
-                                            FROM customer_orders c2 
-                                            LEFT JOIN runner_orders r2
-                                            ON c2.order_id = r2.order_id
-                                            WHERE c2.exclusions IS NOT NULL AND c2.extras IS NOT NULL
-                                            AND c2.customer_id = co.customer_id
-                                            AND r2.cancellation IS NULL) AS [No Change]
-            FROM customer_orders co
-    
-    -- 9. What was the total volume of pizzas ordered for each hour of the day?
-            -- For future reference https://www.w3schools.com/sql/func_sqlserver_datepart.asp
-            -- DATEPART returns int
-        -- Using group By
-            SELECT DATEPART(hh, c.order_time) AS [Time], COUNT(*) AS [Volume Ordered]
-            FROM customer_orders c
-            GROUP BY DATEPART(hh, c.order_time)
-
-        -- Using window functions
-            SELECT DISTINCT DATEPART(hh, c.order_time) AS [Time],
-                            COUNT(*) OVER(PARTITION BY DATEPART(hh, c.order_time)) AS [Volume Ordered]
-            FROM customer_orders c
-
-        -- Using correlated subqueries in SELECT statement
-            SELECT DISTINCT DATEPART(hh, c.order_time) AS [Time], 
-                   (SELECT COUNT(*)
-                   FROM customer_orders co
-                   WHERE DATEPART(hh, c.order_time) = DATEPART(hh, co.order_time)) AS [Volume Ordered]
-            FROM customer_orders c
-
-
-    -- 10.What was the volume of orders for each day of the week?
-            -- For future reference https://www.w3schools.com/sql/func_sqlserver_datename.asp
-            -- DATENAME return str
-            -- w = wd = WEEKDAY
-        -- Using group By 
-            SELECT DATENAME(w, c.order_time) AS [Day], COUNT(*) AS [Volume Ordered]
-            FROM customer_orders c
-            GROUP BY DATENAME(w, c.order_time)
-
-        -- Using window functions
-            SELECT DISTINCT DATENAME(dw, c.order_time) AS [Day],
-                            COUNT(*) OVER(PARTITION BY DATENAME(dw, c.order_time)) AS [Volume Ordered]
-            FROM customer_orders c
-
-        -- Using correlated subqueries in SELECT statement and WEEKDAY interval 
-            SELECT DISTINCT DATENAME(WEEKDAY, c.order_time) AS [Day], 
-                   (SELECT COUNT(*)
-                   FROM customer_orders co
-                   WHERE DATENAME(WEEKDAY, c.order_time) = DATENAME(WEEKDAY, co.order_time)) AS [Volume Ordered]
-            FROM customer_orders c
-```
-
-- B. Runner and Customer Experience
-
-```sql
-    -- 1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
-        -- Using Group BY 
-            --DATEPART & DATENAME both apply
-            SELECT DATEPART(ww,registration_date) AS [Week], COUNT(*) AS [# of Registrants]
-            FROM runners
-            GROUP BY DATEPART(ww,registration_date)
-
-        -- Using Window functions
-            SELECT DISTINCT DATEPART(ww,registration_date) AS [Week],
-                            COUNT(*) OVER(PARTITION BY DATEPART(ww,registration_date)) AS [# of Registrants]
-            FROM runners
-
-        -- Using correlated subqueries
-            SELECT DISTINCT DATEPART(ww, rn.registration_date) AS [Week], 
-            (SELECT COUNT(*) FROM runners r
-             WHERE DATEPART(ww, rn.registration_date) = DATEPART(ww, r.registration_date)) AS [# of Registrants]
-            FROM runners rn
-            WHERE rn.registration_date = registration_date
-
-
-    -- 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
-        -- Using Group By
-            SELECT runner_id, ROUND(AVG(DATEDIFF(s,order_time,pickup_time)/60.0),2) AS [Avg Arrival Time]
-            FROM Orders
-            GROUP BY runner_id
-
-        -- Using window functions without rounding
-            SELECT DISTINCT runner_id, AVG(DATEDIFF(n,order_time,pickup_time)) OVER(PARTITION BY runner_id) AS [Avg Arrival Time]
-            FROM Orders
-        -- Using corrlated sub queries
-            SELECT DISTINCT o.runner_id, (SELECT ROUND(AVG(DATEDIFF(s,s.order_time,s.pickup_time)/60.0),2)
-                                          FROM Orders s
-                                          WHERE s.runner_id = o.runner_id) AS [Avg Arrival Time]
-            FROM Orders o
-    -- 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
-        -- Test method
-            SELECT order_id, COUNT(*) AS [# of Orders], AVG(DATEDIFF(n,order_time, pickup_time)) AS [Preparation Time]
-            FROM Orders
-            WHERE cancellation IS NULL
-            GROUP BY order_id
-
-        -- Using correlated sub queries
-            SELECT DISTINCT o.order_id, 
-                   (SELECT COUNT(*)
-                   FROM Orders s
-                   WHERE o.order_id = s.order_id) AS [# of Pizzas],
-                   (SELECT AVG(DATEDIFF(n,r.order_time,r.pickup_time))
-                   FROM Orders r
-                   WHERE o.order_id = r.order_id) AS [Preparation Time]
-            FROM Orders o
-            WHERE o.cancellation IS NULL
-
-    -- 4. What was the average distance travelled for each customer?
-        -- Using Group By
-            SELECT customer_id, AVG(distance) AS [Avg Distance]
-            FROM Orders
-            WHERE cancellation IS NULL
-            GROUP BY customer_id
-            -- SELECT * FROM Orders
-        -- Using Window Functions
-            SELECT DISTINCT customer_id, AVG(distance) OVER(PARTITION BY customer_id) AS [Avg Distance]
-            FROM Orders
-            WHERE cancellation IS NULL
-            
-        -- Using Correlated Sub queries
-            SELECT DISTINCT o.customer_id, 
-            (SELECT AVG(Distance)
-             FROM Orders s
-             WHERE o.customer_id = s.customer_id
-             AND s.cancellation IS NULL ) AS [Avg Distance]
-            FROM Orders o
-            
-
-    -- 5. What was the difference between the longest and shortest delivery times for all orders?
-            -- Using Normal
-            SELECT  MAX(duration) - MIN(duration) AS [Delivery Range]
-            FROM Orders
-            -- SELECT * FROM Orders
-    -- 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
-        -- Using all methods - no trends found
-            SELECT runner_id, order_id, customer_id, CONVERT(DEC(10,2),AVG(distance/(duration/60))) AS [Speed (Km/hr)], AVG(distance) AS [Avg Distance],
-            (SELECT COUNT(*)
-             FROM Orders s
-             WHERE o.order_id = s.order_id
-             AND o.runner_id = s.runner_id
-             AND s.cancellation IS NULL ) AS [#]
-            FROM Orders o
-            WHERE cancellation IS NULL
-            GROUP BY runner_id, order_id, customer_id
-            ORDER BY runner_id
-    -- 7. What is the successful delivery percentage for each runner?
-        -- Using Joins & Group By
-            SELECT sq1.runner_id,
-                   ((sq1.#Successful * 100)/(sq1.#Successful + ISNULL(sq2.#Cancelled,0))) AS[% Successful Delivery]
-            FROM
-                (SELECT o.runner_id, COUNT(DISTINCT o.order_id) AS [#Successful]
-                FROM Orders o
-                WHERE o.cancellation IS NULL
-                GROUP BY o.runner_id) AS sq1
-            LEFT JOIN
-                (SELECT r.runner_id, COUNT(DISTINCT r.order_id) AS [#Cancelled]
-                FROM Orders r
-                WHERE r.cancellation IS NOT NULL
-                GROUP BY r.runner_id) AS sq2
-            ON sq1.runner_id = sq2.runner_id
-
-        -- Using correlated sub queries
-            SELECT sq.runner_id, ((#Success * 100)/(#Success + #Cancelled)) AS [% Successful Delivery]
-            FROM
-                (SELECT DISTINCT o.runner_id, 
-                    (SELECT COUNT(DISTINCT s.order_id)
-                        FROM Orders s
-                        WHERE s.cancellation IS NULL
-                        AND s.runner_id = o.runner_id) AS [#Success],
-                    (SELECT COUNT(DISTINCT r.order_id)
-                        FROM Orders r
-                        WHERE r.cancellation IS NOT NULL
-                        AND r.runner_id = o.runner_id) AS [#Cancelled]
-                FROM Orders o) AS sq
-```
-
-  - C. Ingredient Optimisation
-  
-```sql
-  -- 0. Creating view for toppings id 
-        -- https://learnsql.com/cookbook/how-to-split-a-string-in-sql-server/
-        -- DROP VIEW pizza_toppings_pivoted 
-
-         CREATE OR ALTER VIEW pizza_toppings_pivoted AS
-             SELECT pizza_id,TRIM([value]) AS topping_id
-             FROM pizza_recipes
-             CROSS APPLY STRING_SPLIT(toppings,',')
-
-         CREATE VIEW pizza AS
-             SELECT n.pizza_id, n.pizza_name, pt.topping_id, pt.topping_name 
-             FROM pizza_names n
-             LEFT JOIN pizza_recipes r
-             ON r.pizza_id = n.pizza_id
-             LEFT JOIN pizza_toppings_pivoted pp
-             ON pp.pizza_id = n.pizza_id
-             LEFT JOIN pizza_toppings pt
-             ON pt.topping_id = pp.topping_id
-
-        -- SELECT * FROM Orders
-
-    
-    -- 1. What are the standard ingredients for each pizza?
-            SELECT DISTINCT pizza_name, STRING_AGG(topping_name,',') AS [Standard Ingredients]
-            FROM pizza
-            GROUP BY pizza_name;
-
-    -- 2. What was the most commonly added extra?
-        -- Using CTE
-            WITH extras_cte AS
-                (SELECT order_id, TRIM([value]) AS extras_id, extras
-                FROM customer_orders
-                CROSS APPLY string_split(extras,',')
-                WHERE extras IS NOT NULL)
-
-            SELECT sq.Extras, sq.[Times Ordered]
-            FROM    
-                (SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered],
-                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
-                FROM extras_cte s
-                LEFT JOIN pizza_toppings t
-                ON t.topping_id = s.extras_id
-                GROUP BY topping_name) sq
-            WHERE sq.Rank = 1;
-
-        -- Using subquery
-            SELECT sq.Extras, sq.[Times Ordered]    
-            FROM    
-                (SELECT topping_name AS Extras, COUNT(order_id) AS [Times Ordered],
-                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
-                FROM (SELECT order_id, TRIM([value]) AS extras 
-                     FROM customer_orders
-                     CROSS APPLY string_split(extras,',')
-                     WHERE extras IS NOT NULL) s
-                LEFT JOIN pizza_toppings t
-                ON t.topping_id = s.extras
-                GROUP BY topping_name) sq
-            WHERE sq.Rank = 1;
-
-        -- Alternatively - difficult to read
-            SELECT sq.topping_name, sq.[Times Ordered]
-            FROM
-                (SELECT topping_name, COUNT(order_id) AS [Times Ordered],
-                ROW_NUMBER() OVER(ORDER BY COUNT(order_id) DESC) AS Rank
-                FROM customer_orders
-                CROSS APPLY string_split(extras,',')
-                LEFT JOIN pizza_toppings t
-                ON t.topping_id = TRIM([value])
-                WHERE extras IS NOT NULL
-                GROUP BY topping_name) sq
-            WHERE sq.Rank = 1;     
-                 
-
-    -- 3. What was the most common exclusion? 
-        -- Using CTE
-            WITH exclusions_cte AS (
-                SELECT order_id, TRIM([value]) AS exclusion
-                FROM customer_orders
-                CROSS APPLY string_split(exclusions,',')
-                WHERE exclusions IS NOT NULL)
+                    (SELECT txn_id, revenue, PERCENT_RANK() OVER(ORDER BY revenue) percentile_rank
+                    FROM
+                        (SELECT DISTINCT txn_id, CONVERT(DEC(10,2),SUM(price * qty * (1-discount/100.0)) OVER(PARTITION BY txn_id)) AS revenue
+                        FROM sales) Q) S
+                WHERE percentile_rank > 0.25 AND percentile_rank < 0.26
                 
-            SELECT sq.exclusion, sq.[Times Ordered]
-            FROM 
-                (SELECT t.topping_name AS exclusion, COUNT(*) AS [Times Ordered],
-                ROW_NUMBER() OVER(ORDER BY COUNT(*) DESC) AS Rank
-                FROM exclusions_cte e
-                LEFT JOIN pizza_toppings t
-                ON e.exclusion = t.topping_id
-                GROUP BY topping_name) sq
-            WHERE sq.Rank = 1;
-            
-        -- Using subqueries
-            SELECT sq.exclusion, sq.[Times Ordered]
-            FROM 
-                (SELECT t.topping_name AS exclusion, COUNT(*) AS [Times Ordered],
-                        ROW_NUMBER() OVER(ORDER BY COUNT(*) DESC) AS Rank
-                FROM (SELECT order_id, TRIM([value]) AS exclusion
-                     FROM customer_orders
-                     CROSS APPLY string_split(exclusions,',')
-                     WHERE exclusions IS NOT NULL) e
-                LEFT JOIN pizza_toppings t
-                ON e.exclusion = t.topping_id
-                GROUP BY topping_name) AS sq
-            WHERE sq.Rank = 1
-        
-
-    -- 4. Generate an order item for each record in the customers_orders table in the format of one of the following:
-        -- Meat Lovers
-        -- Meat Lovers - Exclude Beef
-        -- Meat Lovers - Extra Bacon
-        -- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
-
-        -- Creating extras and exclusions
-                 CREATE OR ALTER VIEW extras_view AS
-                      SELECT order_id, TRIM([value]) AS extras_id
-                      FROM customer_orders
-                      CROSS APPLY string_split(extras,',')
-                      WHERE extras IS NOT NULL
-
-                 CREATE OR ALTER VIEW exclusions_view AS 
-                      SELECT DISTINCT order_id, TRIM([value]) AS exclusions_id
-                      FROM customer_orders
-                      CROSS APPLY string_split(exclusions,',')
-                      WHERE exclusions IS NOT NULL
-
-                -- DROP VIEW exclusions_view
-                -- SELECT * FROM exclusions_view
-                -- SELECT * FROM extras_view
-                -- SELECT * FROM Orders
-                -- SELECT * FROM customer_orders
-        
-        -- Building the query using correlated subqueries, nested subqueries and string functions
-                SELECT CONCAT(pizza_name, IIF(exclusions IS NOT NULL,' - Exclude ','' ), ISNULL(exclusions,''),
-                 IIF(extras IS NOT NULL,' - Extra ','' ), ISNULL(extras,'')) AS [Order item]
-                FROM (SELECT  order_id, pizza_name, 
-                         (SELECT STRING_AGG(t.topping_name, ',')
-                                 FROM exclusions_view e
-                                 LEFT JOIN pizza_toppings t
-                                 ON t.topping_id = e.exclusions_id
-                                 WHERE e.order_id = o.order_id
-                                 AND o.exclusions IS NOT NULL) AS exclusions,
-                         (SELECT STRING_AGG(t.topping_name, ',')
-                                 FROM extras_view x
-                                 LEFT JOIN pizza_toppings t
-                                 ON t.topping_id = x.extras_id
-                                 WHERE x.order_id = o.order_id
-                                 AND o.extras IS NOT NULL) AS extras
-                     FROM customer_orders o
-                     LEFT JOIN pizza_names n
-                     ON n.pizza_id = o.pizza_id) subquery
-
-        
-    -- 5. ***Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
-        -- For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
-            SELECT o.order_id, n.pizza_name, 
-            (SELECT STRING_AGG(t.topping_name,', ')
-                FROM exclusions_view e
-                LEFT JOIN pizza_toppings t
-                ON e.exclusions_id = t.topping_id
-                WHERE e.order_id = o.order_id
-                AND o.exclusions IS NOT NULL) AS Exclusions,
-            (SELECT STRING_AGG(t.topping_name,', ')
-                FROM extras_view x
-                LEFT JOIN pizza_toppings t
-                ON x.extras_id = t.topping_id
-                WHERE x.order_id = o.order_id
-                AND o.extras IS NOT NULL) AS Extras,
-            (SELECT STRING_AGG(p.topping_name,', ')
-                FROM pizza p
-                WHERE p.pizza_id = o.pizza_id) AS recipe 
-            FROM Orders o
-            LEFT JOIN pizza_names n
-            ON n.pizza_id = o.pizza_id
-            WHERE cancellation IS NULL
-
-
-    -- 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
-        -- Using all methods
-           
-            SELECT sq.topping_name Topping, sq.Quantity + sq.Extras - sq.Exclusions AS [Total Quantity]
-            FROM
-                (SELECT DISTINCT t.topping_name, count(*) OVER(PARTITION BY t.topping_name) AS [Quantity], 
-                    (SELECT COUNT(*)
-                        FROM extras_view x
-                        LEFT JOIN pizza_toppings t1
-                        ON x.extras_id = t1.topping_id
-                        WHERE t.topping_name = t1.topping_name) AS [Extras],
-                    (SELECT COUNT(*)
-                        FROM exclusions_view e
-                        LEFT JOIN pizza_toppings t2
-                        ON e.exclusions_id = t2.topping_id
-                        WHERE t.topping_name = t2.topping_name) AS [Exclusions]
-                FROM Orders o
-                LEFT JOIN pizza_toppings_pivoted pp
-                ON pp.pizza_id = o.pizza_id
-                LEFT JOIN pizza_toppings t
-                ON t.topping_id = PP.topping_id
-                WHERE cancellation IS NULL) sq
-            ORDER BY [Total Quantity] DESC
+        -- Percentile_count() https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql?view=sql-server-ver16
+                SELECT DISTINCT txn_id, 
+                       CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_25th,
+                       CONVERT(DEC(10,4), PERCENTILE_CONT(.50)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_50th,
+                       CONVERT(DEC(10,4), PERCENTILE_CONT(.75)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_50th
+                FROM
+                    (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), (price * qty * (1-discount/100.0))) AS revenue
+                    FROM sales) Q
+                ORDER BY txn_id
 ```
+  3. What is the average discount value per transaction?
 
-  - D. Pricing and Ratings
-  
 ```sql
-    -- 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
-        -- Total without grouping by pizza type 
-            SELECT SUM(s.Revenue)
-            FROM   
-                (SELECT CASE WHEN pizza_id = 1 THEN 12
-                            ELSE 10
-                       END AS Revenue
-                FROM Orders
-                WHERE cancellation IS NULL) s
-        -- Window functions and subqueries
-            SELECT DISTINCT s.pizza_name Pizza, SUM(s.Price) OVER(PARTITION BY s.pizza_name) AS Revenue
-            FROM
-                (SELECT p.pizza_name, 
-                       CASE WHEN o.pizza_id = 1 THEN 12 
-                            ELSE 10
-                        END AS Price
-                FROM Orders o
-                LEFT JOIN pizza_names p
-                ON p.pizza_id = o.pizza_id
-                WHERE cancellation IS NULL) s
-            ORDER BY Revenue DESC
-        
-        -- Correlated subqueries with Case stements
-            SELECT DISTINCT pizza_name, 
-                   CASE WHEN p.pizza_id = 1 THEN (SELECT COUNT(*) FROM Orders o2 
-                                                  WHERE o.pizza_id = o2.pizza_id AND o2.cancellation IS NULL) * 12
-                                            ELSE (SELECT COUNT(*) FROM Orders o2 
-                                                  WHERE o.pizza_id = o2.pizza_id AND o2.cancellation IS NULL) * 10
-                   END AS Revenue
-            FROM Orders o
-            LEFT JOIN pizza_names p
-            ON p.pizza_id = o.pizza_id
-            ORDER BY Revenue DESC
-            
-
-    -- 2. What if there was an additional $1 charge for any pizza extras?
-        -- Add cheese is $1 extra
-        -- Using window functions and subqueries            
-            SELECT SUM(s.Price + s.Extra) AS [Revenue with extra charges]
-            FROM    
-                (SELECT o.order_id,
-                       CASE WHEN o.pizza_id = 1 THEN 12 
-                            ELSE 10
-                       END AS Price,
-                       (SELECT COUNT(*)
-                       FROM extras_view x
-                       WHERE o.order_id = x.order_id
-                       AND o.extras IS NOT NULL) AS Extra
-                FROM Orders o
-                WHERE cancellation IS NULL) s
-
-    -- 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
-        -- Create Table
-            -- CREATE TABLE Runner_Ratings (
-            --     Order_id INTEGER,
-            --     Rating INTEGER)
-            
-        -- Insert Values
-            -- INSERT INTO Runner_Ratings ("Order_id", "Rating")
-            -- VALUES 
-            --     (1,2),
-            --     (2,4),
-            --     (3,3),
-            --     (4,2),
-            --     (5,4),
-            --     (7,5),
-            --     (8,5),
-            --     (10,5)
-
-
-    -- 4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
-        SELECT DISTINCT o.customer_id,
-               o.order_id,
-               o.runner_id,
-               r.rating,
-               o.order_time,
-               o.pickup_time,
-               DATEDIFF(s, o.order_time, o.pickup_time)/60.0 AS [Time between order and pickup],
-               o.duration,
-               AVG(o.distance/(o.duration/60)) OVER(PARTITION BY o.order_id) AS [Average speed],
-               COUNT(*) OVER(PARTITION BY o.order_id) AS [Total number of pizzas]
-        -- INTO [Full Table]
-        FROM Orders o
-        LEFT JOIN Runner_Ratings r
-        ON r.Order_id = o.Order_id
-        WHERE cancellation IS NULL
-        
-
-    -- 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
-            SELECT SUM(s.Revenue + s.[Delivery Charge]) AS [Total Revenue]
-            FROM     
-                (SELECT *, 
-                        CASE WHEN pizza_id = 1 THEN 12
-                            ELSE 10
-                        END AS Revenue,
-                        0.3 * distance AS [Delivery Charge]
-                FROM Orders
-                WHERE cancellation IS NULL) s
+            SELECT DISTINCT txn_id, CONVERT(DEC(10,4), AVG(discount) OVER(PARTITION BY txn_id)) AS [Avg Discount Value]
+            FROM sales
+            ORDER BY [Avg Discount Value] DESC
 ```
+
+  4. What is the percentage split of all transactions for members vs non-members?
+
+```sql
+        -- Pivoting
+            WITH memCTE AS
+                -- Derived table
+                    (SELECT *
+                    FROM        
+                        (SELECT COALESCE(member, 'total') member, COUNT(DISTINCT txn_id) AS txn
+                        FROM sales
+                        GROUP BY member  WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(txn)
+                        FOR member
+                        IN(
+                            [t],
+                            [f],
+                            [total]
+                        ) 
+                    ) AS Pivot_table)
+
+            SELECT 
+            CONCAT(CONVERT(DEC(10,2), t * 100.0/total),'%') AS members,
+            CONCAT(CONVERT(DEC(10,2), f * 100.0/total),'%') AS non_members
+            FROM memCTE
+        
+        -- Group By
+            SELECT member, CONCAT(CONVERT(DEC(10,2),#txns*100.0/total),'%') AS percentage
+            FROM    
+                (SELECT DISTINCT member, COUNT(DISTINCT txn_id) AS #txns, total
+                FROM sales, (SELECT COUNT(DISTINCT txn_id) AS total FROM sales) s
+                GROUP BY member, total) Q
+       
+        -- Window functions   
+            SELECT member, CONCAT(CONVERT(DEC(10,2),#txns*100.0/total),'%') AS percentage
+            FROM    
+                (SELECT DISTINCT member, total, LAST_VALUE(Rank) 
+                        OVER(PARTITION BY member ORDER BY Rank ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS #txns
+                FROM
+                    (SELECT DISTINCT member, txn_id, DENSE_RANK() OVER(PARTITION BY member ORDER BY txn_id) AS Rank
+                     FROM sales)r,
+                    (SELECT COUNT(DISTINCT txn_id) AS total 
+                     FROM sales) s
+            ) Q
+```
+  5. What is the average revenue for member transactions and non-member transactions?
+
+```sql
+        -- Window functions            
+            SELECT member, revenue/#txns AS Avg_revenue
+            FROM    
+                (SELECT DISTINCT s.member, SUM(price * qty * (1 - discount/100.0)) OVER(PARTITION BY s.member) AS revenue, #txns
+                 FROM sales s
+                 LEFT JOIN (SELECT member, COUNT(DISTINCT txn_id) as #txns
+                         FROM sales
+                         GROUP BY member) r
+                 ON s.member = r.member) Q
+            
+        -- Group By
+            SELECT member, SUM(qty * price * (1 - discount/100.0))/COUNT(DISTINCT txn_id) Avg_revenue
+            FROM sales
+            GROUP BY member
+            ORDER BY member
+```
+
+- Product Analysis
+
+  1. What are the top 3 products by total revenue before discount?
+  
+  ```sql
+        -- Group By
+            SELECT TOP 3 product_name, SUM(qty * s.price) revenue
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY product_name
+            ORDER BY revenue DESC
+
+        -- Alternatively    
+            SELECT product_name, SUM(qty * s.price) revenue
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY product_name
+            ORDER BY revenue DESC
+            OFFSET 0 ROWS
+            FETCH NEXT 3 ROWS ONLY
+        
+        -- Correlated subqueries    
+            SELECT TOP 3 product_name, 
+            (SELECT SUM(qty * s.price) 
+             FROM sales s
+             WHERE s.prod_id = p.product_id) revenue
+            FROM product_details p
+            ORDER BY revenue DESC
+        
+        -- Window functions    
+            SELECT DISTINCT TOP 3 product_name, 
+            SUM(qty * s.price) OVER(PARTITION BY product_name) revenue
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            ORDER BY revenue DESC
+  ```
+
+  2. What is the total quantity, revenue and discount for each segment?
+  
+  ```sql
+            SELECT segment_name, SUM(qty) AS quantity, 
+                   SUM(qty * s.price) AS revenue,
+                   CONVERT(DEC(10,2), SUM(qty * s.price * DISCOUNT/100.0)) AS discount
+            FROM sales s
+            LEFT JOIN product_details p
+            ON p.product_id = s.prod_id
+            GROUP BY segment_name
+  ```
+  
+  3. What is the top selling product for each segment?
+  
+  ```sql
+        -- Group By
+            SELECT segment_name, product_name, SUM(qty) as Quantity
+            FROM sales s
+            LEFT JOIN product_details p 
+            ON p.product_id = s.prod_id
+            GROUP BY segment_name, product_name, prod_id
+            HAVING SUM(qty) =   (SELECT MAX(quantity) 
+                                 FROM
+                                     (SELECT segment_name, SUM(qty) quantity
+                                      FROM sales s1
+                                      LEFT JOIN product_details p1
+                                      ON p1.product_id = s1.prod_id
+                                      GROUP BY segment_name, product_name) Q
+                                 WHERE Q.segment_name = p.segment_name)
+            ORDER BY segment_name, Quantity DESC
+            
+        -- Window functions
+            SELECT DISTINCT segment_name, 
+                   FIRST_VALUE(product_name) OVER(PARTITION BY segment_name ORDER BY Quantity DESC) AS  product_name,
+                   FIRST_VALUE(Quantity) OVER(PARTITION BY segment_name ORDER BY Quantity DESC) AS  Quantity
+            FROM
+                (SELECT DISTINCT segment_name, product_name, prod_id, SUM(qty) OVER(PARTITION BY segment_name, product_name)as Quantity
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id) Q
+            ORDER BY segment_name, Quantity DESC
+  ```
+
+  4. What is the total quantity, revenue and discount for each category?
+  
+  ```sql
+        -- Group By
+            SELECT category_name, SUM(qty) Quantity,
+                   convert(DEC(10,2),SUM(qty * s.price * (1 - discount/100.0))) AS Revenue,
+                   convert(DEC(10,2),SUM(qty * s.price * discount/100.0)) AS Discount
+            FROM sales s
+            LEFT JOIN product_details p
+            ON s.prod_id = p.product_id
+            GROUP BY category_name
+        
+        -- Correlated Subqueries
+            SELECT DISTINCT category_name,
+                   (SELECT SUM(qty) FROM sales s1
+                    LEFT JOIN product_details p1
+                    ON s1.prod_id = p1.product_id
+                    WHERE p.category_id = p1.category_id) Quantity,
+                   (SELECT convert(DEC(10,2),SUM(qty * s2.price * (1 - discount/100.0))) FROM sales s2
+                    LEFT JOIN product_details p2
+                    ON s2.prod_id = p2.product_id
+                    WHERE p.category_id = p2.category_id) Revenue,
+                   (SELECT convert(DEC(10,2),SUM(qty * s3.price * discount/100.0)) FROM sales s3
+                    LEFT JOIN product_details p3
+                    ON s3.prod_id = p3.product_id
+                    WHERE p.category_id = p3.category_id) Discount
+            FROM product_details p
+  ```
+            
+  5. What is the top selling product for each category?
+  
+  ```sql
+        -- Group By x correlated subquery in having clause    
+            SELECT category_name, product_name, SUM(qty) AS Quantity
+            FROM sales s
+            LEFT JOIN product_details p 
+            ON p.product_id = s.prod_id
+            GROUP BY category_name, product_name
+            HAVING SUM(qty) = (SELECT MAX(Quantity)
+                               FROM (SELECT category_name, SUM(qty) AS Quantity
+                                      FROM sales s1
+                                      LEFT JOIN product_details p1
+                                      ON p1.product_id = s1.prod_id
+                                      GROUP BY category_name, product_name) Q
+                               WHERE Q.category_name = p.category_name)
+            ORDER BY category_name, Quantity DESC
+
+        -- Window functions
+            SELECT DISTINCT category_name,
+                   FIRST_VALUE(product_name) OVER(PARTITION BY category_name ORDER BY Quantity DESC) [Product Name],
+                   LAST_VALUE(Quantity) OVER(PARTITION BY category_name ORDER BY Quantity 
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) [Quantity]
+            FROM (SELECT DISTINCT category_name, product_name, SUM(qty) OVER(PARTITION BY category_name, product_name) Quantity
+                  FROM sales s
+                  LEFT JOIN product_details p 
+                  ON p.product_id = s.prod_id) Q
+  ```
+
+  6. What is the percentage split of revenue by product for each segment?
+  
+  ```sql
+        -- Pivoting (Not the answer to the question. I got carried away :))
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                    FROM     
+                        (SELECT COALESCE(segment_name, 'Total') Segment,
+                            CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                        FROM sales s
+                        LEFT JOIN product_details p 
+                        ON p.product_id = s.prod_id
+                        GROUP BY segment_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Segment]
+                        IN(Jacket, Jeans, Shirt, Socks, Total)
+                    ) AS Pivot_Table)
+
+            SELECT 
+                    CONVERT(DEC(10,2), Jacket * 100.0/ Total) Jacket,
+                    CONVERT(DEC(10,2), Jeans * 100.0/ Total) Jeans,
+                    CONVERT(DEC(10,2), Shirt * 100.0/ Total) Shirt,
+                    CONVERT(DEC(10,2), Socks * 100.0/ Total) Socks
+            FROM pCTE;
+        
+        -- Using Group By     
+            SELECT Segment, Product, CONVERT(DEC(10,2),Revenue *100.0/Total) AS [Percentage]
+            FROM                
+                (SELECT DISTINCT segment_name Segment, product_name Product,
+                        CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name, product_name)) Revenue,
+                        CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name)) Total
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id) Q
+            ORDER BY Segment, [Percentage] DESC
+
+        -- Alternatively
+            SELECT Segment, Product, Revenue, 
+            CONVERT(DEC(10,2), Revenue * 100.0/(SELECT SUM(qty * s.price * (1 - discount/100.0)) 
+                                                FROM sales s 
+                                                LEFT JOIN product_details p 
+                                                ON s.prod_id = p.product_id
+                                                WHERE p.segment_name = q.Segment)) [Percentage]
+            FROM     
+               (SELECT COALESCE(segment_name, 'Total') Segment, COALESCE(product_name, 'Total') Product,
+                   CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id
+                GROUP BY segment_name,product_name WITH ROLLUP) Q
+  ```
+
+  7. What is the percentage split of revenue by segment for each category?
+  
+  ```sql
+        -- Pivoting
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                     FROM     
+                        (SELECT COALESCE(category_name, 'Total') Category,
+                                CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         GROUP BY category_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Category]
+                        IN(Mens, Womens, Total)
+                    ) AS Pivot_Table)
+            -- 
+            SELECT 
+                CONCAT(CONVERT(DEC(10,2), Mens * 100.0/ Total),'%') Men,
+                CONCAT(CONVERT(DEC(10,2), Womens * 100.0/ Total),'%') Women
+            FROM pCTE;
+
+        -- Using Window Functions     
+            SELECT Category, Segment, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Percentage]
+            FROM                
+                (SELECT DISTINCT category_name Category, segment_name Segment,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name, segment_name)) Revenue,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Total
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id) Q
+            ORDER BY Category;
+
+        -- Alternatively
+            SELECT Category, Segment, Revenue, 
+            CONVERT(DEC(10,2), Revenue *100.0/(SELECT SUM(qty * s.price * (1 - discount/100.0))
+                                               FROM sales s
+                                               LEFT JOIN product_details p
+                                               ON s.prod_id = p.product_id
+                                               WHERE Q.Category = p.category_name)) [Percentage]
+            FROM
+                (SELECT COALESCE(category_name, 'Total') Category, 
+                    COALESCE(segment_name, 'Total') Segment, 
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                 FROM sales s
+                 LEFT JOIN product_details p 
+                 ON p.product_id = s.prod_id
+                 GROUP BY category_name, segment_name WITH ROLLUP) Q;
+  ```
+  
+  8. What is the percentage split of total revenue by category?
+  
+  ```sql
+        -- Pivoting
+            WITH pCTE AS
+                -- Derived Table
+                    (SELECT *
+                     FROM     
+                        (SELECT COALESCE(category_name, 'Total') Category,
+                                CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0))) Revenue
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         GROUP BY category_name WITH ROLLUP) Q
+                -- Pivoting
+                    PIVOT(
+                        SUM(Revenue)
+                        FOR [Category]
+                        IN(Mens, Womens, Total)
+                    ) AS Pivot_Table)
+            -- 
+            SELECT 
+                CONCAT(CONVERT(DEC(10,2), Mens * 100.0/ Total),'%') Men,
+                CONCAT(CONVERT(DEC(10,2), Womens * 100.0/ Total),'%') Women
+            FROM pCTE;
+
+        -- Using Group By     
+            SELECT Category, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Percentage]
+            FROM                
+                (SELECT DISTINCT category_name Category,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Revenue,
+                    CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER()) Total
+                 FROM sales s
+                 LEFT JOIN product_details p 
+                 ON p.product_id = s.prod_id) Q;
+  ```
+
+  9. What is the total transaction “penetration” for each product? 
+     - (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
+     
+  ```sql
+        SELECT Product, CONVERT(DEC(10,3), txns * 100.0/total)[Penetration]
+        FROM    
+            (SELECT product_name Product, COUNT(txn_id) AS txns, (SELECT COUNT(DISTINCT txn_id) FROM sales) total 
+            FROM sales s
+            LEFT JOIN product_details p 
+            ON p.product_id = s.prod_id
+            GROUP BY product_name) Q
+        ORDER BY Penetration DESC
+  ```
+  
+  10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction? **
+
+- Reporting Challenge
+  
+  ```sql
+    -- Questions
+        -- Write a single SQL script that combines all of the previous questions into a scheduled report that the 
+        -- Balanced Tree team can run at the beginning of each month to calculate the previous month’s values.
+        -- He first wants you to generate the data for January only -
+        -- but then he also wants you to demonstrate that you can easily run the samne analysis for February without many changes (if at all).
+    --
+    -- Stored Procedure for Report 1
+         CREATE OR ALTER PROCEDURE Report1 @month NVARCHAR(10), @member NVARCHAR(10) AS 
+             WITH 
+                 penetration AS
+                  (SELECT Product, ID, CONCAT(CONVERT(DEC(10,3), txns * 100.0/total),'%') [Penetration]
+                  FROM    
+                     (SELECT product_name Product, prod_id ID, COUNT(txn_id) AS txns, (SELECT COUNT(DISTINCT txn_id) FROM sales) total 
+                     FROM sales s
+                     LEFT JOIN product_details p 
+                     ON p.product_id = s.prod_id
+                     WHERE DATENAME(MM,start_txn_time) = @month
+                     AND member = @member
+                     GROUP BY product_name, prod_id) Q),
+                 percent_prod AS
+                  (SELECT Segment, Product, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Product Percentage]
+                   FROM                
+                     (SELECT DISTINCT segment_name Segment, product_name Product,
+                             CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name, product_name)) Revenue,
+                             CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY segment_name)) Total
+                     FROM sales s
+                     LEFT JOIN product_details p 
+                     ON p.product_id = s.prod_id
+                     WHERE DATENAME(MM,start_txn_time) = @month
+                     AND member = @member) Q),
+                 percent_segment AS
+                  (SELECT Category, Segment, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Segment Percentage]
+                  FROM                
+                         (SELECT DISTINCT category_name Category, segment_name Segment,
+                             CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name, segment_name)) Revenue,
+                             CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Total
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         WHERE DATENAME(MM,start_txn_time) = @month
+                         AND member = @member) Q),
+                 percent_category AS
+                  (SELECT Category, Revenue, CONCAT(CONVERT(DEC(10,2),Revenue *100.0/Total),'%') AS [Category Percentage]
+                  FROM                
+                     (SELECT DISTINCT category_name Category,
+                         CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Revenue,
+                         CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER()) Total
+                         FROM sales s
+                         LEFT JOIN product_details p 
+                         ON p.product_id = s.prod_id
+                         WHERE DATENAME(MM,start_txn_time) = @month
+                         AND member = @member) Q)
+             --
+             SELECT  DISTINCT category_name, [Category Percentage],
+                             segment_name, [Segment Percentage], 
+                             product_name, [Product Percentage], penetration,
+                     SUM(qty) OVER(PARTITION BY prod_id) AS quantity_sold,
+                     SUM(s.qty * s.price) OVER(PARTITION BY prod_id) AS revenue_before_discount,
+                     CAST(SUM(s.qty * s.price * s.discount/100.0) OVER(PARTITION BY prod_id) AS DEC(10,2)) AS discount,
+                     CAST(SUM(s.qty * s.price * (1- s.discount/100.0)) OVER(PARTITION BY prod_id) AS DEC(10,2)) AS revenue                       
+             FROM sales s
+             LEFT JOIN product_details d
+                 ON d.product_id = s.prod_id
+             LEFT JOIN penetration p
+                 ON p.ID = s.prod_id
+             LEFT JOIN percent_prod pp
+                 ON pp.Product = p.Product
+             LEFT JOIN percent_category pc
+                 ON pc.Category = d.category_name
+             LEFT JOIN percent_segment ps
+                 ON ps.Category = d.category_name AND ps.Segment = d.segment_name
+             WHERE DATENAME(MM,start_txn_time) = @month
+              AND member = @member
+             ORDER BY segment_name
+
+         GO;
+    --
+    -- Stored procedure for Report 2
+        
+         CREATE OR ALTER PROCEDURE Report2 @month NVARCHAR(10)
+         AS
+             WITH 
+                 Percentiles AS
+                     (SELECT DISTINCT txn_id, 
+                        CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_25th,
+                        CONVERT(DEC(10,4), PERCENTILE_CONT(.50)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_50th,
+                        CONVERT(DEC(10,4), PERCENTILE_CONT(.75)
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_75th
+                     FROM
+                         (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), (price * qty * (1-discount/100.0))) AS revenue
+                         FROM sales
+                         WHERE DATENAME(MM,start_txn_time) = @month) Q),
+                 Avg_discount AS
+                     (SELECT DISTINCT txn_id, 
+                      CONVERT(DEC(10,4), AVG(discount) OVER(PARTITION BY txn_id)) AS [Avg Discount Value]
+                      FROM sales
+                      WHERE DATENAME(MM,start_txn_time) = @month),
+                 Unique_transactions AS
+                     (SELECT COUNT(DISTINCT txn_id) AS [# Unique Transactions]
+                      FROM sales
+                      WHERE DATENAME(MM,start_txn_time) = @month),
+                 Avg_Unique_Products AS
+                     (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), AVG(qty * 1.0) 
+                      OVER(PARTITION BY txn_id)) AS [Avg Unique Products]
+                      FROM sales s
+                      WHERE DATENAME(MM,start_txn_time) = @month)
+             --
+             SELECT *
+             FROM
+                 (SELECT p.txn_id, percentile_25th, percentile_50th, percentile_75th, [Avg Discount Value],[Avg Unique Products] --[# Unique Transactions]
+                  FROM Percentiles p
+                  LEFT JOIN Avg_discount a
+                  ON a.txn_id = p.txn_id
+                  LEFT JOIN Avg_Unique_Products u
+                  ON u.txn_id = p.txn_id) Q
+        GO;   
+    --
+    EXEC Report1 @month = 'February', @member = 't'
+    EXEC Report2 @month = 'February'
+--
+/*              Bonus Challenge                         */
+    -- Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table.
+    -- Hint: you may want to consider using a recursive CTE to solve this problem!
+
+    SELECT DISTINCT 
+           pp.product_id product_id, price,
+           CONCAT_WS(' - ',r.level_text,ph.level_text) product_name,
+           ph.id category_id, r.parent_id segment_id, r.id style_id,  
+           ph.level_text category_name, h.level_text segment_name, 
+           r.level_text style_name 
+    FROM product_hierarchy r 
+    LEFT JOIN product_hierarchy h 
+    ON h.id = r.parent_id
+    LEFT JOIN product_hierarchy ph 
+    ON ph.id = h.parent_id
+    LEFT JOIN product_prices pP
+    ON pp.id = r.id
+    WHERE ph.level_text IS NOT NULL
+
+    SELECT * FROM product_details
+  ```
   
   </p>
   </details>
