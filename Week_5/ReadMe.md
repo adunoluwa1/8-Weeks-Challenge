@@ -1,15 +1,15 @@
 # 8-Week SQL Challenge 
 # Cast Study #5 - Data Mart
 
-[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #6 - Data Mart```](https://8weeksqlchallenge.com/case-study-5/)
+[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #5 - Data Mart```](https://8weeksqlchallenge.com/case-study-5/)
 
 ![image](https://user-images.githubusercontent.com/99233674/199310103-d2e6237b-2fa4-43af-b408-defe11a727e0.png)
 
 # 📕 Table of Contents
-- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#%EF%B8%8F-background-statement)
-- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#-dataset)
-- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#%EF%B8%8F-case-study-questions) 
-- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#-solutions)
+- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#%EF%B8%8F-background-statement)
+- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#-dataset)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#%EF%B8%8F-case-study-questions)
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#-solutions)
 
 # 🛠️ Background Statement
 > Data Mart is Danny’s latest venture and after running international operations for his online supermarket that specialises in fresh produce - Danny is asking for your support to analyse his sales performance.
