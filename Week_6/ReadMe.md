@@ -6,10 +6,10 @@
 ![image](https://user-images.githubusercontent.com/99233674/199298666-f9e2ffd8-1966-4ae8-b27a-8790c48bf3db.png)
 
 # 📕 Table of Contents
-- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#%EF%B8%8F-background-statement)
-- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#-dataset)
-- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#%EF%B8%8F-case-study-questions) 
-- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#-solutions)
+- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#%EF%B8%8F-background-statement)
+- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#-dataset)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#%EF%B8%8F-case-study-questions) 
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_6#-solutions)
 
 # 🛠️ Background Statement
 > Clique Bait is not like your regular online seafood store - the founder and CEO Danny, was also a part of a digital data analytics team and wanted to expand his knowledge into the seafood industry!
