@@ -9542,13 +9542,13 @@
 
     -- What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
         -- Creating View
-                -- CREATE VIEW reallocation_days AS (
-                --     SELECT DATEDIFF(D,prev_date,start_date) r_time
+                -- CREATE OR ALTER VIEW reallocation_days AS (
+                --     SELECT DATEDIFF(D,prev_date,start_date) r_time, region_id
                 --     FROM
                 --         (SELECT *,
                 --         LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
                 --         FROM
-                --             (SELECT DISTINCT customer_id, node_id,
+                --             (SELECT DISTINCT customer_id, node_id, region_id,
                 --                     (SELECT MIN(start_date)
                 --                     FROM customer_nodes c1
                 --                     WHERE c.customer_id = c1.customer_id
@@ -9577,6 +9577,13 @@
                 (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
                 FROM reallocation_days) sq2
             WHERE rank = (SELECT CAST((COUNT(*) * 0.95) + 1 AS INT) FROM reallocation_days)
+        
+        --Using Percentile_cont()
+        SELECT  DISTINCT region_id,
+                CONVERT(DEC(10,2), PERCENTILE_CONT(.5) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
+                CONVERT(DEC(10,2), PERCENTILE_CONT(.8) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
+                CONVERT(DEC(10,2), PERCENTILE_CONT(.95) WITHIN GROUP(ORDER BY r_time) OVER(PARTITION BY region_id)) AS [95th Percentile]
+        FROM reallocation_days
     
 --
 /*          Customer Transactions                        */

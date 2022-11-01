@@ -192,14 +192,14 @@
         -- Percentile_count() https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql?view=sql-server-ver16
                 SELECT DISTINCT txn_id, 
                        CONVERT(DEC(10,4),PERCENTILE_CONT(.25)
-                       WITHIN GROUP (ORDER BY revenue)
-                       OVER(PARTITION BY txn_id)) percentile_25th,
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_25th,
                        CONVERT(DEC(10,4), PERCENTILE_CONT(.50)
-                       WITHIN GROUP (ORDER BY revenue)
-                       OVER(PARTITION BY txn_id)) percentile_50th,
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_50th,
                        CONVERT(DEC(10,4), PERCENTILE_CONT(.75)
-                       WITHIN GROUP (ORDER BY revenue)
-                       OVER(PARTITION BY txn_id)) percentile_50th
+                        WITHIN GROUP (ORDER BY revenue)
+                        OVER(PARTITION BY txn_id)) percentile_50th
                 FROM
                     (SELECT DISTINCT txn_id, CONVERT(DEC(10,2), (price * qty * (1-discount/100.0))) AS revenue
                     FROM sales) Q
@@ -479,9 +479,9 @@
                 (SELECT DISTINCT category_name Category, segment_name Segment,
                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name, segment_name)) Revenue,
                     CONVERT(DEC(10,2), SUM(qty * s.price * (1 - discount/100.0)) OVER(PARTITION BY category_name)) Total
-                 FROM sales s
-                 LEFT JOIN product_details p 
-                 ON p.product_id = s.prod_id) Q
+                FROM sales s
+                LEFT JOIN product_details p 
+                ON p.product_id = s.prod_id) Q
             ORDER BY Category;
 
         -- Alternatively
