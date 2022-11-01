@@ -1,9 +1,9 @@
 # 8-Week SQL Challenge 
 # Cast Study #6 - Clique Bait
 
-[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #6 - CliqueBait```](https://8weeksqlchallenge.com/case-study-7/)
+[```Home```](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge) [```🌐 Case Study #6 - CliqueBait```](https://8weeksqlchallenge.com/case-study-6/)
 
-![image](https://user-images.githubusercontent.com/99233674/199073414-24c4102f-8f01-47bc-adfe-63ee20ad40cf.png)
+![image](https://user-images.githubusercontent.com/99233674/199298666-f9e2ffd8-1966-4ae8-b27a-8790c48bf3db.png)
 
 # 📕 Table of Contents
 - [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_7#%EF%B8%8F-background-statement)
@@ -164,7 +164,7 @@ Each question can be answered using a single query - but as you are writing the 
 #### Digital Analysis
    1. How many users are there?
     
-    ```sql
+```sql
             SELECT COUNT(DISTINCT user_id) AS [#Users]
             FROM events e
             LEFT JOIN users u
@@ -172,10 +172,10 @@ Each question can be answered using a single query - but as you are writing the 
 
             SELECT COUNT(DISTINCT user_id) AS [#Users]
             FROM users
-    ```
+```
    2. How many cookies does each user have on average?
         
-    ```sql
+```sql
         -- Using Group
             SELECT AVG(#cookies) AS Avg_Cookies
             FROM    
@@ -190,10 +190,10 @@ Each question can be answered using a single query - but as you are writing the 
                  COUNT(cookie_id) OVER(PARTITION BY user_id) AS [#cookies]
                  FROM users) Q
         
-    ```
+```
    3. What is the unique number of visits by all users per month?
        
-    ```sql
+```sql
         -- Using Window Fuctions    
             SELECT DISTINCT Num, [Month], LAST_VALUE([#Rank]) OVER(PARTITION BY Month ORDER BY Month) AS #Visits
             FROM    
@@ -218,10 +218,10 @@ Each question can be answered using a single query - but as you are writing the 
             FROM events e
             ORDER BY [Num]
     
-    ```
+```
    4. What is the number of events for each event type?
            
-    ```sql
+```sql
         -- Using Group By
             SELECT event_type, COUNT(*) AS #events
             FROM events
@@ -238,10 +238,10 @@ Each question can be answered using a single query - but as you are writing the 
                     WHERE v.event_type = e.event_type) #events
             FROM events e
             ORDER BY event_type    
-    ```
+```
    5. What is the percentage of visits which have a purchase event?
           
-    ```sql
+```sql
         -- Using CTEs
             WITH 
                 tot_visits AS
@@ -291,10 +291,10 @@ Each question can be answered using a single query - but as you are writing the 
                     (SELECT COUNT(DISTINCT visit_id)
                     FROM events) AS #Total
                 FROM events e) Q    
-    ```
+```
    6. What is the percentage of visits which view the checkout page but do not have a purchase event?
           
-    ```sql
+```sql
         -- Using Subqueries
             SELECT CONCAT(CAST(#Visits * 100.0/#Total AS DEC(10,2)),'%') AS perc_visits
             FROM    
@@ -308,10 +308,10 @@ Each question can be answered using a single query - but as you are writing the 
                     FROM events) AS #Total) Q
             --
     
-    ```
+```
    7. What are the top 3 pages by number of views?
           
-    ```sql
+```sql
          -- Group By
             SELECT TOP 3 page_name, COUNT(DISTINCT visit_id) AS #Views
             FROM events e
@@ -327,10 +327,10 @@ Each question can be answered using a single query - but as you are writing the 
                 LEFT JOIN page_hierarchy p
                 ON p.page_id = e.page_id) Q
             ORDER BY #Views DESC   
-    ```
+```
    8. What is the number of views and cart adds for each product category?
      
-    ```sql
+```sql
         -- Correlated subqueries
             SELECT DISTINCT p.product_category, 
                 (SELECT COUNT(*)
@@ -371,10 +371,10 @@ Each question can be answered using a single query - but as you are writing the 
             FROM Views v
             LEFT JOIN Cart_Adds c
             ON v.product_category = c.product_category    
-    ``` 
+``` 
    9. What are the top 3 products by purchases?
         
-    ```sql
+```sql
         SELECT TOP 3 page_name, COUNT(visit_id) AS #Purchases
         FROM events e
         LEFT JOIN page_hierarchy p
@@ -385,7 +385,7 @@ Each question can be answered using a single query - but as you are writing the 
                          WHERE event_type = 3)
         GROUP BY page_name
         ORDER BY #Purchases DESC    
-    ```
+```
     
 ## Product Funnel Analysis
    Using a single SQL query - create a new output table which has the following details:
@@ -394,7 +394,7 @@ Each question can be answered using a single query - but as you are writing the 
    - How many times was each product added to a cart but not purchased (abandoned)?
    - How many times was each product purchased?
    
-   ```sql
+```sql
         CREATE OR ALTER VIEW Product AS
         WITH 
             Views AS
@@ -442,10 +442,10 @@ Each question can be answered using a single query - but as you are writing the 
             ON v.product_id = p.product_id
         LEFT JOIN page_hierarchy ph
             ON v.product_id = CONVERT(VARCHAR(10),ph.product_id)    
-   ```
+```
    Additionally, create another table which further aggregates the data for the above points but this time for each product category instead of individual products.
    
-   ```sql
+```sql
         WITH 
             Views AS
                 (SELECT COALESCE(CONVERT(VARCHAR(10),product_category),'Total') product_category, COUNT(*) #views
@@ -490,52 +490,52 @@ Each question can be answered using a single query - but as you are writing the 
             ON v.product_category = a.product_category
         LEFT JOIN Purchased p
             ON v.product_category = p.product_category    
-   ```
+```
     
    - Use your 2 new output tables - answer the following questions:
    
    1. Which product had the most views, cart adds and purchases?
    
-   ```sql
+```sql
         SELECT DISTINCT
             (SELECT Name FROM Product WHERE #views = (SELECT MAX(#views) FROM Product WHERE Name NOT IN ('Total'))) [Most Views],
             (SELECT Name FROM Product WHERE #cartadds = (SELECT MAX(#cartadds) FROM Product WHERE Name NOT IN ('Total'))) [Most Cart Adds],
             (SELECT Name FROM Product WHERE #purchased = (SELECT MAX(#purchased) FROM Product WHERE Name NOT IN ('Total'))) [Most Purchased]
         FROM Product    
-   ```
+```
    2. Which product was most likely to be abandoned?
    
-   ```sql
+```sql
         SELECT Name
         FROM Product
         WHERE #abandons = (SELECT MAX(#abandons)
                            FROM Product
                            WHERE Name NOT IN ('Total'))    
-   ```
+```
    3. Which product had the highest view to purchase percentage?
    
-   ```sql
+```sql
         SELECT TOP 1 Name, CAST(#purchased * 100.0/#views AS DEC(10,2)) AS [perc_view_purchase]
         FROM Product
         WHERE Name <> 'Total'
         ORDER BY [perc_view_purchase] DESC    
-   ```
+```
    4. What is the average conversion rate from view to cart add?
    
-   ```sql
+```sql
         SELECT AVG([view_addcart_ rate]) AS Avg_conversion_rate
         FROM
             (SELECT Name, CAST(#cartadds * 100.0/#views AS DEC(10,2)) AS [view_addcart_ rate]
             FROM Product) Q 
-   ```
+```
    5. What is the average conversion rate from cart add to purchase?
    
-   ```sql
+```sql
         SELECT AVG([addcart_purchase_rate]) AS Avg_conversion_rate
         FROM
             (SELECT Name, CAST(#purchased * 100.0/#cartadds AS DEC(10,2)) AS [addcart_purchase_rate]
             FROM Product) Q    
-   ```
+```
 ## Product Analysis
    
    Generate a table that has 1 single row for every unique visit_id record and has the following columns:
@@ -550,7 +550,7 @@ Each question can be answered using a single query - but as you are writing the 
    - click: count of ad clicks for each visit
    - (Optional column) cart_products: a comma separated text value with products added to the cart sorted by the order they were added to the cart (hint: use the sequence_number)
   
-   ```sql
+```sql
      SELECT DISTINCT user_id, visit_id, 
            MIN(e.event_time) OVER(PARTITION BY visit_id) visit_start_time,
            COUNT(e.page_id) OVER(PARTITION BY visit_id) page_views,
@@ -585,7 +585,7 @@ Each question can be answered using a single query - but as you are writing the 
     LEFT JOIN page_hierarchy p
     ON e.page_id = p.page_id
    
-   ```
+```
   
   </p>
   </details>
