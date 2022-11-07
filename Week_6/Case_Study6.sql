@@ -2240,7 +2240,7 @@
             FROM events t
             WHERE t.event_type = 5
             AND e.visit_id = t.visit_id) AS click,
-           (SELECT STRING_AGG(page_name,',') AS cart
+           (SELECT STRING_AGG(page_name,',') WITHIN GROUP(ORDER BY sequence_number) AS cart
             FROM events s
             LEFT JOIN page_hierarchy ph ON s.page_id = ph.page_id
             WHERE ph.product_category IS NOT NULL
