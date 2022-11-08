@@ -9,3 +9,4 @@ Check the official site for the challenge at https://8weeksqlchallenge.com/
 # [Week 5](/Week_5)
 # [Week 6](/Week_6)
 # [Week 7](/Week_7)
+# [Week 8](/Week_8)
