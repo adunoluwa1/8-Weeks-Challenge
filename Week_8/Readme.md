@@ -6,10 +6,10 @@
 ![image](https://user-images.githubusercontent.com/99233674/200472997-a638419c-c5ac-40a4-b1d3-31fed5d1f702.png)
 
 # 📕 Table of Contents
-- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#%EF%B8%8F-background-statement)
-- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#-dataset)
-- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#%EF%B8%8F-case-study-questions)
-- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/tree/main/Week_5#-solutions)
+- [🛠️ Background Statement](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_8/Readme.md#%EF%B8%8F-background-statement)
+- [📂 Dataset](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_8/Readme.md#-dataset)
+- [✒️ Case Study Questions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_8/Readme.md#%EF%B8%8F-case-study-questions)
+- [🏆 Solutions](https://github.com/adunoluwa1/SQL-8-Weeks-Challenge/blob/main/Week_8/Readme.md#-solutions)
 
 # 🛠️ Background Statement
 > Danny created Fresh Segments, a digital marketing agency that helps other businesses analyse trends in online ad click behaviour for their unique customer base.
