@@ -36,33 +36,28 @@ For this case study there is a total of 2 datasets which you will need to use to
   <details><summary>View table</summary>
     <p>
   
-    _month	_year	month_year	interest_id	composition	index_value	ranking	percentile_ranking
-    7	2018	07-2018	32486	11.89	6.19	1	99.86
-    7	2018	07-2018	6106	9.93	5.31	2	99.73
-    7	2018	07-2018	18923	10.85	5.29	3	99.59
-    7	2018	07-2018	6344	10.32	5.1	4	99.45
-    7	2018	07-2018	100	10.77	5.04	5	99.31
-    7	2018	07-2018	69	10.82	5.03	6	99.18
-    7	2018	07-2018	79	11.21	4.97	7	99.04
-    7	2018	07-2018	6111	10.71	4.83	8	98.9
-    7	2018	07-2018	6214	9.71	4.83	8	98.9
-    7	2018	07-2018	19422	10.11	4.81	10	98.63
-      
-    |region_id|	region_name|
-    |---------|------------|
-    |1	      |Africa      |
-    |2	      |America     |
-    |3        |Asia        |
-    |4        |Europe      |
-    |5        |Oceania     |
+    |_month |	_year   |	month_year  |	interest_id |	composition| index_value |	ranking |	percentile_ranking  |
+    |-------|-----------|---------------|---------------|--------------|-------------|----------|-----------------------|
+    |7      |	2018    |	07-2018     |	32486   	| 11.89        |	6.19     |	1       |	99.86               |
+    |7      |	2018    |	07-2018     |	6106    	| 9.93         |	5.31     |	2       |	99.73               |
+    |7      |	2018    |	07-2018     |	18923   	| 10.85        |	5.29     |	3       |	99.59               |
+    |7      |	2018    |	07-2018     |	6344    	| 10.32        |	5.1      |	4       |	99.45               |
+    |7      |	2018    |	07-2018     |	100 	    | 10.77        |	5.04     |	5       |	99.31               |
+    |7      |	2018    |	07-2018     |	69  	    | 10.82        |	5.03     |	6       |	99.18               |
+    |7      |	2018    |	07-2018     |	79  	    | 11.21        |	4.97     |	7       |	99.04               |
+    |7      |	2018    |	07-2018     |	6111    	| 10.71        |	4.83     |	8       |	98.9                |
+    |7      |	2018    |	07-2018     |	6214    	| 9.71         |	4.83     |	8       |	98.9                |
+    |7      |	2018    |	07-2018     |	19422   	| 10.11        |	4.81     |	10      |	98.63               |
+
       
     </p>
   </details>
 
   > For example - let’s interpret the first row of the interest_metrics table together:
 
-    _month	_year	month_year	interest_id	composition	index_value	ranking	percentile_ranking
-    7	2018	07-2018	32486	11.89	6.19	1	99.86
+    |_month	|_year | month_year| interest_id| composition |	index_value | ranking |	percentile_ranking |
+    |-------|------|-----------|------------|-------------|-------------|---------|--------------------|
+    |7	    |2018  | 07-2018   | 32486      | 11.89       |	6.19        |	1     |	99.86              |
   
   > In July 2018, the composition metric is 11.89, meaning that 11.89% of the client’s customer list interacted with the interest interest_id = 32486 - we can link interest_id to a separate mapping table to find the segment name called “Vacation Rental Accommodation Researchers”
 
@@ -77,17 +72,18 @@ For this case study there is a total of 2 datasets which you will need to use to
   <details><summary>View table</summary>
     <p>
   
-    id	interest_name	interest_summary	created_at	last_modified
-    1	Fitness Enthusiasts	Consumers using fitness tracking apps and websites.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    2	Gamers	Consumers researching game reviews and cheat codes.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    3	Car Enthusiasts	Readers of automotive news and car reviews.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    4	Luxury Retail Researchers	Consumers researching luxury product reviews and gift ideas.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    5	Brides & Wedding Planners	People researching wedding ideas and vendors.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    6	Vacation Planners	Consumers reading reviews of vacation destinations and accommodations.	2016-05-26 14:57:59	2018-05-23 11:30:13
-    7	Motorcycle Enthusiasts	Readers of motorcycle news and reviews.	2016-05-26 14:57:59	2018-05-23 11:30:13
-    8	Business News Readers	Readers of online business news content.	2016-05-26 14:57:59	2018-05-23 11:30:12
-    12	Thrift Store Shoppers	Consumers shopping online for clothing at thrift stores and researching locations.	2016-05-26 14:57:59	2018-03-16 13:14:00
-    13	Advertising Professionals	People who read advertising industry news.	2016-05-26 14:57:59	2018-05-23 11:30:12
+    |id |	interest_name	            |   interest_summary	                                                               |created_at           |	last_modified       |
+    |---|-------------------------------|--------------------------------------------------------------------------------------|---------------------|----------------------|
+    |1  |	Fitness Enthusiasts         |	Consumers using fitness tracking apps and websites.	                               | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |2  |	Gamers	                    |   Consumers researching game reviews and cheat codes.                                | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |3  |	Car Enthusiasts	            |   Readers of automotive news and car reviews.	                                       | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |4  |	Luxury Retail Researchers   |	Consumers researching luxury product reviews and gift ideas.                       | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |5  |	Brides & Wedding Planners   |	People researching wedding ideas and vendors.	                                   | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |6  |	Vacation Planners	        |   Consumers reading reviews of vacation destinations and accommodations.             | 2016-05-26 14:57:59 |	2018-05-23 11:30:13 |
+    |7  |	Motorcycle Enthusiasts	    |   Readers of motorcycle news and reviews.	                                           | 2016-05-26 14:57:59 |	2018-05-23 11:30:13 |
+    |8  |	Business News Readers       |	Readers of online business news content.	                                       | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
+    |12 |	Thrift Store Shoppers       |	Consumers shopping online for clothing at thrift stores and researching locations. | 2016-05-26 14:57:59 |	2018-03-16 13:14:00 |
+    |13 |	Advertising Professionals   |	People who read advertising industry news.	                                       | 2016-05-26 14:57:59 |	2018-05-23 11:30:12 |
      
     </p>
   </details>
@@ -136,19 +132,20 @@ The following case study questions include some general data exploration analysi
   
   Required output for question 4:
 
-    month_year	interest_name	max_index_composition	3_month_moving_avg	1_month_ago	2_months_ago
-    2018-09-01	Work Comes First Travelers	8.26	7.61	Las Vegas Trip Planners: 7.21	Las Vegas Trip Planners: 7.36
-    2018-10-01	Work Comes First Travelers	9.14	8.20	Work Comes First Travelers: 8.26	Las Vegas Trip Planners: 7.21
-    2018-11-01	Work Comes First Travelers	8.28	8.56	Work Comes First Travelers: 9.14	Work Comes First Travelers: 8.26
-    2018-12-01	Work Comes First Travelers	8.31	8.58	Work Comes First Travelers: 8.28	Work Comes First Travelers: 9.14
-    2019-01-01	Work Comes First Travelers	7.66	8.08	Work Comes First Travelers: 8.31	Work Comes First Travelers: 8.28
-    2019-02-01	Work Comes First Travelers	7.66	7.88	Work Comes First Travelers: 7.66	Work Comes First Travelers: 8.31
-    2019-03-01	Alabama Trip Planners	6.54	7.29	Work Comes First Travelers: 7.66	Work Comes First Travelers: 7.66
-    2019-04-01	Solar Energy Researchers	6.28	6.83	Alabama Trip Planners: 6.54	Work Comes First Travelers: 7.66
-    2019-05-01	Readers of Honduran Content	4.41	5.74	Solar Energy Researchers: 6.28	Alabama Trip Planners: 6.54
-    2019-06-01	Las Vegas Trip Planners	2.77	4.49	Readers of Honduran Content: 4.41	Solar Energy Researchers: 6.28
-    2019-07-01	Las Vegas Trip Planners	2.82	3.33	Las Vegas Trip Planners: 2.77	Readers of Honduran Content: 4.41
-    2019-08-01	Cosmetics and Beauty Shoppers	2.73	2.77	Las Vegas Trip Planners: 2.82	Las Vegas Trip Planners: 2.77
+    |month_year	|       interest_name                | max_index_composition|3_month_moving_avg	|1_month_ago                         |   	2_months_ago                    |
+    |-----------|------------------------------------|----------------------|-------------------|------------------------------------|--------------------------------------|
+    |2018-09-01 |	Work Comes First Travelers       |	 8.26               |	7.61	        |   Las Vegas Trip Planners: 7.21	 |   Las Vegas Trip Planners: 7.36      |    
+    |2018-10-01 |	Work Comes First Travelers       |	 9.14               |	8.20	        |   Work Comes First Travelers: 8.26 |   	Las Vegas Trip Planners: 7.21   |    
+    |2018-11-01 |	Work Comes First Travelers       |	 8.28               |	8.56	        |   Work Comes First Travelers: 9.14 |   	Work Comes First Travelers: 8.26|
+    |2018-12-01 |	Work Comes First Travelers       |	 8.31               |	8.58	        |   Work Comes First Travelers: 8.28 |   	Work Comes First Travelers: 9.14|
+    |2019-01-01 |	Work Comes First Travelers       |	 7.66               |	8.08	        |   Work Comes First Travelers: 8.31 |   	Work Comes First Travelers: 8.28|
+    |2019-02-01 |	Work Comes First Travelers       |	 7.66               |	7.88	        |   Work Comes First Travelers: 7.66 |   	Work Comes First Travelers: 8.31|
+    |2019-03-01 |	Alabama Trip Planners       	 |   6.54               |	7.29	        |   Work Comes First Travelers: 7.66 |   	Work Comes First Travelers: 7.66|
+    |2019-04-01 |	Solar Energy Researchers         |	 6.28               |	6.83	        |   Alabama Trip Planners: 6.54	     |   Work Comes First Travelers: 7.66   |
+    |2019-05-01 |	Readers of Honduran Content      |	 4.41               |	5.74	        |   Solar Energy Researchers: 6.28	 |   Alabama Trip Planners: 6.54        |
+    |2019-06-01 |	Las Vegas Trip Planners     	 |   2.77               |	4.49	        |   Readers of Honduran Content: 4.41|   	Solar Energy Researchers: 6.28  |
+    |2019-07-01 |	Las Vegas Trip Planners     	 |   2.82               |	3.33	        |   Las Vegas Trip Planners: 2.77	 |   Readers of Honduran Content: 4.41  |
+    |2019-08-01 |	Cosmetics and Beauty Shoppers    |   2.73               |	2.77	        |   Las Vegas Trip Planners: 2.82	 |   Las Vegas Trip Planners: 2.77      |
 
 
 # 🏆 Solutions
