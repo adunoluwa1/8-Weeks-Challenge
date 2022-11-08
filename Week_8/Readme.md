@@ -92,7 +92,9 @@ For this case study there is a total of 2 datasets which you will need to use to
   
   
 # ✒️ Case Study Questions
-The following case study questions include some general data exploration analysis for the nodes and transactions before diving right into the core business questions and finishes with a challenging final request!
+The following questions can be considered key business questions that are required to be answered for the Fresh Segments team.
+
+Most questions can be answered using a single query however some questions are more open ended and require additional thought and not just a coded solution!
 
 ## A. Data Exploration and Cleansing
    
@@ -152,304 +154,129 @@ The following case study questions include some general data exploration analysi
   <details><summary>View solution</summary>
   <p>
   
-## A. Customer Nodes Exploration
+## A. Data Exploration and Cleansing
    
-   1. How many unique nodes are there on the Data Bank system?
-   
-```sql
-        SELECT COUNT(DISTINCT node_id) AS Nodes
-        FROM customer_nodes
-```
-   2. What is the number of nodes per region?
-   
-```sql
-        -- Using Group By
-            SELECT region_name, COUNT(node_id) AS #Nodes
-            FROM customer_nodes c
-            LEFT JOIN regions r
-            ON c.region_id = r.region_id
-            GROUP BY region_name
-            ORDER BY region_name
+   1. Update the fresh_segments.interest_metrics table by modifying the month_year column to be a date data type with the start of the month
+  
+  ```SQL
+    
+  ```
+   2. What is count of records in the fresh_segments.interest_metrics for each month_year value sorted in chronological order (earliest to latest) with the null values appearing first?
+  
+  ```SQL
+    
+  ```
+   3. What do you think we should do with these null values in the fresh_segments.interest_metrics
+  
+  ```SQL
+    
+  ```
+   4. How many interest_id values exist in the fresh_segments.interest_metrics table but not in the fresh_segments.interest_map table? What about the other way around
+  
+  ```SQL
+    
+  ```
+   5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
+  
+  ```SQL
+    
+  ```
+   6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where interest_id = 21246 in your joined output and include all columns from fresh_segments.interest_metrics and all columns from fresh_segments.interest_map except from the id column.
+  
+  ```SQL
+    
+  ```
+   7. Are there any records in your joined table where the month_year value is before the created_at value from the fresh_segments.interest_map table? Do you think these values are valid and why?
+  
+  ```SQL
+    
+  ```
+    
+## B. Interest Analysis
 
-        -- Using Window Functions
-            SELECT DISTINCT region_name,
-                   COUNT(node_id) OVER(PARTITION BY c.region_id) AS #Nodes
-            FROM customer_nodes c
-            LEFT JOIN regions r
-            ON c.region_id = r.region_id
-            ORDER BY region_name
-
-        -- Using correlated subqueries
-            SELECT region_name, (SELECT COUNT(node_id)
-                                 FROM customer_nodes c
-                                 WHERE r.region_id = c.region_id) AS #Nodes
-            FROM regions r
-            ORDER BY region_name
-```
-   3. How many customers are allocated to each region?
+   1. Which interests have been present in all month_year dates in our dataset?
+  
+  ```SQL
+    
+  ```
+   2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
+  
+  ```SQL
+    
+  ```
+   3. If we were to remove all interest_id values which are lower than the total_months value we found in the previous question - how many total data points would we be removing?
+  
+  ```SQL
+    
+  ```
+   4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
+  
+  ```SQL
+    
+  ```
+   5. After removing these interests - how many unique interests are there for each month?
+  
+  ```SQL
+    
+  ```
+    
+## C. Segment Analysis
    
-```sql
-        -- Using Group By
-            SELECT region_name, COUNT(DISTINCT customer_id) AS #Customers
-            FROM customer_nodes c
-            LEFT JOIN regions r
-            ON c.region_id =r.region_id
-            GROUP BY region_name
-            ORDER BY region_name
-        
-        -- Using Window functions
-            SELECT DISTINCT region_name, LAST_VALUE(#Customers) OVER(PARTITION BY region_name ORDER BY region_name) AS ##Customers
-            FROM
-                (SELECT DISTINCT r.region_name, customer_id, DENSE_RANK() OVER(PARTITION BY region_name ORDER BY customer_id) AS #Customers
-                FROM customer_nodes c
-                LEFT JOIN regions r
-                ON c.region_id = r.region_id) sq
-
-        -- Using Correlated subqueries
-            SELECT region_name, (SELECT COUNT(DISTINCT customer_id)
-                                 FROM customer_nodes c
-                                 WHERE r.region_id = c.region_id) AS #Customers
-            FROM regions r
-```
-   4. How many days on average are customers reallocated to a different node?
+   1. Using our filtered dataset by removing the interests with less than 6 months worth of data, which are the top 10 and bottom 10 interests which have the largest composition values in any month_year? Only use the maximum composition value for each interest but you must keep the corresponding month_year
+  
+  ```SQL
+    
+  ```
    
-```sql
-        -- Using Window functions    
-            SELECT AVG(DATEDIFF(D, #prev_date, #start_date)) [Avg Reallocation Time (days)]
-            FROM 
-                (SELECT customer_id, node_id, #start_date,
-                        LAG(#start_date) OVER(PARTITION BY customer_id ORDER BY #start_date) #prev_date
-                FROM
-                    (SELECT DISTINCT customer_id, node_id, 
-                            FIRST_VALUE(start_date) OVER(PARTITION BY customer_id, node_id ORDER BY customer_id, node_id, start_date) #start_date
-                    FROM customer_nodes) s) q
-            WHERE #prev_date IS NOT NULL
-
-        -- Using correlated subqueries
-            -- One method
-                SELECT AVG(DATEDIFF(D,prev_date,start_date)) [Avg Reallocation Time (days)]
-                FROM
-                    (SELECT *,
-                    LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
-                    FROM
-                        (SELECT DISTINCT customer_id, node_id,
-                                (SELECT MIN(start_date)
-                                FROM customer_nodes c1
-                                WHERE c.customer_id = c1.customer_id
-                                AND c.node_id = c1.node_id) AS start_date
-                        FROM customer_nodes c) s)q
-                WHERE prev_date IS NOT NULL
-
-            -- Another method
-                SELECT AVG(DATEDIFF(D,prev_date,start_date)) [Avg Reallocation Time (days)]
-                FROM
-                    (SELECT customer_id, node_id, start_date, prev_date
-                    FROM
-                        (SELECT DISTINCT customer_id, node_id, start_date, LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
-                        FROM customer_nodes c
-                        WHERE start_date = (SELECT MIN(start_date)
-                                            FROM customer_nodes c1
-                                            WHERE c.customer_id = c1.customer_id
-                                            AND c.node_id = c1.node_id)) s
-                    WHERE prev_date IS NOT NULL) sq
-```
-   5. What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
-
-```sql
-        -- Creating View
-                -- CREATE OR ALTER VIEW reallocation_days AS (
-                --     SELECT DATEDIFF(D,prev_date,start_date) r_time, region_id
-                --     FROM
-                --         (SELECT *,
-                --         LAG(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS prev_date
-                --         FROM
-                --             (SELECT DISTINCT customer_id, node_id, region_id,
-                --                     (SELECT MIN(start_date)
-                --                     FROM customer_nodes c1
-                --                     WHERE c.customer_id = c1.customer_id
-                --                     AND c.node_id = c1.node_id) AS start_date
-                --             FROM customer_nodes c) s)q
-                --     WHERE prev_date IS NOT NULL
-                -- )
-            --
-        -- Median
-            SELECT r_time AS Median
-            FROM
-                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
-                FROM reallocation_days) sq2
-            WHERE rank = (SELECT (COUNT(*) + 1)/2 FROM reallocation_days)
-
-        -- 80th Percentile
-            SELECT r_time AS [80th Percentile]
-            FROM
-                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
-                FROM reallocation_days) sq2
-            WHERE rank = (SELECT CAST((COUNT(*) * 0.8 + 1 ) AS INT) FROM reallocation_days)
-
-        -- 95th Percentile
-            SELECT r_time AS [80th Percentile]
-            FROM
-                (SELECT *, ROW_NUMBER() OVER(ORDER BY r_time) AS Rank
-                FROM reallocation_days) sq2
-            WHERE rank = (SELECT CAST((COUNT(*) * 0.95) + 1 AS INT) FROM reallocation_days)
-        
-        --Using Percentile_cont()
-        SELECT  DISTINCT region_id,
-                CONVERT(DEC(10,2), PERCENTILE_CONT(.5) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
-                CONVERT(DEC(10,2), PERCENTILE_CONT(.8) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
-                CONVERT(DEC(10,2), PERCENTILE_CONT(.95) WITHIN GROUP(ORDER BY r_time) OVER(PARTITION BY region_id)) AS [95th Percentile]
-        FROM reallocation_days
-```
-
-## B. Customer Transactions
-
-   1. What is the unique count and total amount for each transaction type?
+   2. Which 5 interests had the lowest average ranking value?
+  
+  ```SQL
+    
+  ```
+    
+   3. Which 5 interests had the largest standard deviation in their percentile_ranking value?
+  
+  ```SQL
+    
+  ```
    
-```sql
-        -- Using Group By
-            SELECT txn_type, COUNT(customer_id) #transactions, SUM(txn_amount) #total_amount
-            FROM customer_transactions
-            GROUP BY txn_type
-            ORDER BY txn_type
+   4. For the 5 interests found in the previous question - what was minimum and maximum percentile_ranking values for each interest and its corresponding year_month value? Can you describe what is happening for these 5 interests?
+  
+  ```SQL
+    
+  ```
+    
+   5. How would you describe our customers in this segment based off their composition and ranking values? What sort of products or services should we show to these customers and what should we avoid?
 
-        -- Using correlated subquery
-            SELECT DISTINCT txn_type, 
-                   (SELECT COUNT(*) FROM customer_transactions c1 WHERE c.txn_type = c1.txn_type) #transactions,
-                   (SELECT SUM(txn_amount) FROM customer_transactions c2 WHERE c.txn_type = c2.txn_type) #total_amount
-            FROM customer_transactions c
-            ORDER BY txn_type
-        
-        -- Using Window functions
-            SELECT DISTINCT txn_type,
-                   COUNT(customer_id) OVER(PARTITION BY  txn_type) #transactions,
-                   SUM(txn_amount) OVER(PARTITION BY txn_type) #total_amount
-            FROM customer_transactions
-            ORDER BY txn_type
-```
-   2. What is the average total historical deposit counts and amounts for all customers?
-   
-```sql
-        -- Using Group By
-            SELECT AVG(#tot_deposit_amount) Avg_deposit, AVG(#deposits) Num_deposits
-            FROM    
-                (SELECT customer_id, txn_type, SUM(txn_amount) #tot_deposit_amount, COUNT(*) #deposits 
-                FROM customer_transactions
-                WHERE txn_type = 'deposit'
-                GROUP BY customer_id, txn_type) sq
-        -- Using Window Functions
-            SELECT AVG(Total_deposit) Avg_deposit, AVG(#deposits) Num_deposits
-            FROM
-                (SELECT DISTINCT customer_id, 
-                       SUM(txn_amount) OVER(PARTITION BY customer_id) AS Total_deposit,
-                       COUNT(txn_amount) OVER(PARTITION BY customer_id) AS #deposits
-                FROM customer_transactions
-                WHERE txn_type = 'deposit') sq
-```
-   3. For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?
-   
-```sql
-        SELECT Month, COUNT(DISTINCT customer_id) AS #customers
-        FROM 
-            (SELECT customer_id, DATEPART(mm,txn_date) M, DATENAME(mm,txn_date) Month,
-                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'deposit' AND c.customer_id = ct.customer_id ) #deposit,
-                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'withdrawal' AND c.customer_id = ct.customer_id) #withdrawal,
-                (SELECT COUNT(txn_type) FROM customer_transactions ct WHERE txn_type = 'purchase' AND c.customer_id = ct.customer_id ) #purchase
-            FROM customer_transactions c) sq
-        WHERE #deposit > 1 AND (#purchase = 1 OR #withdrawal = 1)
-        GROUP BY Month;
-```
-   4. What is the closing balance for each customer at the end of the month?
-   
-```sql
-        -- Using Correlated subqueries
-            WITH sq AS
-                (SELECT DISTINCT customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) AS Month,
-                        (SELECT SUM(txn_amount) FROM customer_transactions c1 WHERE txn_type = 'deposit' 
-                            AND c.customer_id = c1.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c1.txn_date)) #deposits,
-                        (SELECT SUM(txn_amount) FROM customer_transactions c2 WHERE txn_type = 'withdrawal' 
-                            AND c.customer_id = c2.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c2.txn_date)) #withdrawal,
-                        (SELECT SUM(txn_amount) FROM customer_transactions c3 WHERE txn_type = 'purchase' 
-                            AND c.customer_id = c3.customer_id AND DATENAME(MM,c.txn_date) = DATENAME(MM,c3.txn_date)) #purchase
-                FROM customer_transactions c) 
-            --
-            SELECT *
-            FROM
-                (SELECT customer_id, [Month], (ISNULL(#deposits,0) - (ISNULL(#withdrawal,0) + ISNULL(#purchase,0))) AS balance
-                FROM sq) q
-            WHERE balance IS NOT NULL;
-
-        -- Using Joins
-            WITH CTE AS
-                (SELECT DISTINCT c.customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) Months, 
-                    ISNULL(deposit,0) Deposit, ISNULL(withdrawal,0) Withdrawal, ISNULL(purchases,0) Purchases
-                FROM customer_transactions c
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) deposit
-                            FROM customer_transactions
-                            WHERE txn_type = 'deposit'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c1
-                ON c.customer_id = c1.customer_id AND DATEPART(MM,c.txn_date) = c1.M
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) withdrawal
-                            FROM customer_transactions
-                            WHERE txn_type = 'withdrawal'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c2
-                ON c.customer_id = c2.customer_id AND DATEPART(MM,c.txn_date) = c2.M
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) purchases
-                            FROM customer_transactions
-                            WHERE txn_type = 'purchase'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c3
-                ON c.customer_id = c3.customer_id AND DATEPART(MM,c.txn_date) = c3.M)
-            -- 
-            SELECT *, (Deposit - Withdrawal - Purchases) Balance
-            FROM CTE; 
-```
-   5. What is the percentage of customers who increase their closing balance by more than 5%?
-   
-## C. Data Allocation Challenge
-   
-   To test out a few different hypotheses - the Data Bank team wants to run an experiment where different groups of customers would be allocated data using 3 different options:
-
-   - Option 1: data is allocated based off the amount of money at the end of the previous mont
-   - Option 2: data is allocated on the average amount of money kept in the account in the previous 30 days
-   - Option 3: data is updated real-time
-   
-   For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
-   - running customer balance column that includes the impact each transaction
-   - customer balance at the end of each month
-   - minimum, average and maximum values of the running balance for each customer
-   
-   Using all of the data available - how much data would have been required for each option on a monthly basis?
-   
-```sql
-        CREATE OR ALTER VIEW Extra AS
-            WITH Q1 AS
-                (SELECT DISTINCT c.customer_id, DATEPART(MM,txn_date) M, DATENAME(MM,txn_date) Months, 
-                    ISNULL(deposit,0) Deposit, ISNULL(withdrawal,0) Withdrawal, ISNULL(purchases,0) Purchases
-                FROM customer_transactions c
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) deposit
-                            FROM customer_transactions
-                            WHERE txn_type = 'deposit'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c1
-                ON c.customer_id = c1.customer_id AND DATEPART(MM,c.txn_date) = c1.M
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) withdrawal
-                            FROM customer_transactions
-                            WHERE txn_type = 'withdrawal'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c2
-                ON c.customer_id = c2.customer_id AND DATEPART(MM,c.txn_date) = c2.M
-                LEFT JOIN  (SELECT customer_id, DATEPART(MM,txn_date) M, SUM(txn_amount) purchases
-                            FROM customer_transactions
-                            WHERE txn_type = 'purchase'
-                            GROUP BY customer_id, DATEPART(MM,txn_date)) c3
-                ON c.customer_id = c3.customer_id AND DATEPART(MM,c.txn_date) = c3.M)
-            -- 
-            SELECT *, MIN(Running_Balance) OVER(PARTITION BY customer_id) AS Min_Running_Balance,
-                      MAX(Running_Balance) OVER(PARTITION BY customer_id) AS Max_Running_Balance,
-                      AVG(Running_Balance) OVER(PARTITION BY customer_id) AS Avg_Running_Balance
-            FROM
-                (SELECT *, SUM(Balance) OVER(PARTITION BY customer_id ORDER BY M) AS Running_Balance
-                FROM
-                    (SELECT *, (Deposit - Withdrawal - Purchases) Balance
-                    FROM Q1) Q2) Q3
-```
+## D. Index Analysis
+  The index_value is a measure which can be used to reverse calculate the average composition for Fresh Segments’ clients.
+  
+  1. Average composition can be calculated by dividing the composition column by the index_value column rounded to 2 decimal places.
+  
+  ```SQL
+    
+  ```
+  2. What is the top 10 interests by the average composition for each month?
+  
+  ```SQL
+    
+  ```
+  3. For all of these top 10 interests - which interest appears the most often?
+  
+  ```SQL
+    
+  ```
+  4. What is the average of the average composition for the top 10 interests for each month?
+  
+  ```SQL
+    
+  ```
+  5. What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output shown below.
+  
+  ```SQL
+    
+  ```
+  6. Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
   
   </p>
   </details>
