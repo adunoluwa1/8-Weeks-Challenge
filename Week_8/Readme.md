@@ -159,37 +159,106 @@ Most questions can be answered using a single query however some questions are m
    1. Update the fresh_segments.interest_metrics table by modifying the month_year column to be a date data type with the start of the month
   
   ```SQL
-    
+          ALTER TABLE interest_metrics
+          ALTER COLUMN month_year VARCHAR(10);
+      
+          UPDATE interest_metrics
+          SET [month_year] = PARSE([month_year] AS DATE using 'AR-LB') 
+          
+          ALTER TABLE interest_metrics
+          ALTER COLUMN month_year DATE;  
   ```
    2. What is count of records in the fresh_segments.interest_metrics for each month_year value sorted in chronological order (earliest to latest) with the null values appearing first?
   
   ```SQL
-    
+      -- Group By
+        SELECT month_year, COUNT(*) #records
+        FROM interest_metrics
+        GROUP BY month_year
+        ORDER BY month_year  
+
+      -- Window functions
+        SELECT DISTINCT month_year, COUNT(*) OVER(PARTITION BY month_year) #records
+        FROM interest_metrics
+        ORDER BY month_year     
   ```
    3. What do you think we should do with these null values in the fresh_segments.interest_metrics
   
   ```SQL
-    
+      --
+        SELECT *
+        FROM interest_metrics
+        WHERE interest_id IS NOT NULL    
   ```
    4. How many interest_id values exist in the fresh_segments.interest_metrics table but not in the fresh_segments.interest_map table? What about the other way around
   
   ```SQL
-    
+      -- One
+        SELECT interest_id
+        FROM interest_metrics
+        EXCEPT
+        SELECT ID
+        FROM interest_map
+
+
+        SELECT  interest_id 
+        FROM interest_metrics 
+        WHERE interest_id NOT IN (SELECT id
+                                  FROM interest_map)
+      -- Two
+        SELECT ID
+        FROM interest_map
+        EXCEPT
+        SELECT interest_id
+        FROM interest_metrics
+
+        SELECT id
+        FROM interest_map
+        WHERE id NOT IN (SELECT interest_id
+                         FROM interest_metrics
+                         WHERE interest_id IS NOT NULL)    
   ```
    5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
   
   ```SQL
+      -- Correlated subqueries
+        SELECT ID, (SELECT COUNT(*) FROM interest_metrics i WHERE i.interest_id = m.id) #Records
+        FROM interest_map m
+
+      -- Group By
+        SELECT ID, COUNT(*) #Records
+        FROM interest_map m
+        LEFT JOIN interest_metrics i
+        ON m.id = i.interest_id
+        GROUP BY ID
+
+      -- Window functions
+        SELECT DISTINCT ID, COUNT(*) OVER(PARTITION BY ID) #Records
+        FROM interest_map m
+        LEFT JOIN interest_metrics i
+        ON m.id = i.interest_id
     
   ```
    6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where interest_id = 21246 in your joined output and include all columns from fresh_segments.interest_metrics and all columns from fresh_segments.interest_map except from the id column.
   
   ```SQL
-    
+      --
+        SELECT *
+        FROM interest_map m
+        LEFT JOIN interest_metrics i
+        ON m.id = i.interest_id
+        WHERE interest_id = 21246    
   ```
    7. Are there any records in your joined table where the month_year value is before the created_at value from the fresh_segments.interest_map table? Do you think these values are valid and why?
   
   ```SQL
-    
+      -- 
+        SELECT *
+        FROM interest_map m
+        LEFT JOIN interest_metrics i
+        ON m.id = i.interest_id
+        WHERE month_year < created_at
+        AND month_year IS NOT NULL    
   ```
     
 ## B. Interest Analysis
@@ -197,27 +266,55 @@ Most questions can be answered using a single query however some questions are m
    1. Which interests have been present in all month_year dates in our dataset?
   
   ```SQL
-    
+         SELECT i.interest_name,interest_id, COUNT(_month) #months, 
+               STRING_AGG(_month, ',') WITHIN GROUP(ORDER BY month_year) visual
+        FROM interest_metrics m
+        LEFT JOIN interest_map i
+        ON i.id = m.interest_id
+        GROUP BY interest_name, interest_id
+        HAVING COUNT(_month) = (SELECT DATEDIFF(MM,MIN(month_year), MAX(month_year)) + 1
+                                FROM interest_metrics)
+        ORDER BY CAST(interest_id AS INT)   
   ```
    2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
   
   ```SQL
-    
+          
+        WITH Q AS
+            (SELECT interest_id, COUNT(_month) #months
+             FROM interest_metrics
+             WHERE interest_id IS NOT NULL
+             GROUP BY interest_id)
+        
+        SELECT DISTINCT #months, 
+               COUNT(interest_id) OVER(PARTITION BY #months) #ids,
+               CONVERT(DEC(10,2), COUNT(interest_id) OVER(ORDER BY #months) * 100.0 / (SELECT COUNT(interest_id) FROM Q)) [%GT]
+        FROM Q
+            
   ```
    3. If we were to remove all interest_id values which are lower than the total_months value we found in the previous question - how many total data points would we be removing?
   
   ```SQL
-    
+        SELECT COUNT(*)
+        FROM
+            (SELECT interest_id, COUNT(_month) #months
+             FROM interest_metrics
+             GROUP BY interest_id
+             HAVING COUNT(_month) < 14) Q    
   ```
    4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
-  
-  ```SQL
-    
-  ```
+
    5. After removing these interests - how many unique interests are there for each month?
   
   ```SQL
-    
+        SELECT _month, COUNT(DISTINCT interest_id) #ids
+        FROM interest_metrics
+        WHERE interest_id NOT IN  (SELECT interest_id
+                                   FROM interest_metrics
+                                   WHERE interest_id IS NOT NULL
+                                   GROUP BY interest_id
+                                   HAVING COUNT(_month) < 14)
+        GROUP BY _month;    
   ```
     
 ## C. Segment Analysis
@@ -225,25 +322,70 @@ Most questions can be answered using a single query however some questions are m
    1. Using our filtered dataset by removing the interests with less than 6 months worth of data, which are the top 10 and bottom 10 interests which have the largest composition values in any month_year? Only use the maximum composition value for each interest but you must keep the corresponding month_year
   
   ```SQL
+        CREATE OR ALTER VIEW filtered_set AS
+        SELECT *
+        FROM interest_metrics m 
+        LEFT JOIN interest_map i
+        ON M.interest_id = I.id
+        WHERE interest_id NOT IN  (SELECT interest_id
+                                   FROM interest_metrics
+                                   WHERE interest_id IS NOT NULL
+                                   GROUP BY interest_id
+                                   HAVING COUNT(_month) < 14)
+
+        WITH Q AS
+          (SELECT month_year, interest_id, composition, ROW_NUMBER() 
+                  OVER(PARTITION BY month_year ORDER BY composition DESC) #rank
+           FROM filtered_set)
+        
+        SELECT *
+        FROM Q q1          
+        WHERE #rank <=10 OR #rank >= (SELECT MAX(#Rank) - 10
+                                      FROM Q q2
+                                      WHERE q1.month_year = q2.month_year)
+       
     
   ```
    
    2. Which 5 interests had the lowest average ranking value?
   
   ```SQL
-    
+        SELECT DISTINCT interest_name, AVG(RANKING) OVER(PARTITION BY interest_id) avg_rank
+        FROM filtered_set
+        ORDER BY avg_rank ASC
+        OFFSET 0 ROWS
+        FETCH NEXT 5 ROWS ONLY    
   ```
     
    3. Which 5 interests had the largest standard deviation in their percentile_ranking value?
   
   ```SQL
-    
+        SELECT DISTINCT interest_name, CONVERT(DEC(10,2), STDEV(percentile_ranking) OVER(PARTITION BY interest_id)) std
+        FROM filtered_set
+        ORDER BY std DESC
+        OFFSET 0 ROWS
+        FETCH NEXT 5 ROWS ONLY    
   ```
    
    4. For the 5 interests found in the previous question - what was minimum and maximum percentile_ranking values for each interest and its corresponding year_month value? Can you describe what is happening for these 5 interests?
   
   ```SQL
-    
+         WITH Q AS
+            (SELECT DISTINCT TOP 5 interest_id, 
+             CONVERT(DEC(10,2), STDEV(percentile_ranking) OVER(PARTITION BY interest_id)) std
+             FROM filtered_set
+             ORDER BY std DESC)
+        
+        SELECT interest_name, percentile_ranking, month_year
+        FROM  filtered_set f1   
+        WHERE interest_id IN (SELECT interest_id FROM Q)
+        AND (percentile_ranking = (SELECT MAX(percentile_ranking)
+                                  FROM filtered_set f2
+                                  WHERE f1.interest_id = f2.interest_id)
+        OR  percentile_ranking =  (SELECT MIN(percentile_ranking)
+                                  FROM filtered_set f2
+                                  WHERE f1.interest_id = f2.interest_id))
+           
   ```
     
    5. How would you describe our customers in this segment based off their composition and ranking values? What sort of products or services should we show to these customers and what should we avoid?
@@ -254,27 +396,86 @@ Most questions can be answered using a single query however some questions are m
   1. Average composition can be calculated by dividing the composition column by the index_value column rounded to 2 decimal places.
   
   ```SQL
+        CREATE OR ALTER VIEW comp AS
+        SELECT *, CONVERT(DEC(10,2), composition/index_value) avg_composition
+        FROM interest_metrics m
+        LEFT JOIN interest_map i 
+        ON i.id = m.interest_id
+        WHERE interest_id IS NOT NULL
+
+        SELECT *
+        FROM comp
     
   ```
   2. What is the top 10 interests by the average composition for each month?
   
   ```SQL
-    
+        SELECT * 
+        FROM
+          (SELECT interest_name, DATENAME(MM,month_year) [month], month_year, avg_composition,
+                ROW_NUMBER() OVER(PARTITION BY month_year ORDER BY avg_composition DESC) #Rank
+           FROM comp
+           WHERE _month IS NOT NULL) Q
+        WHERE #Rank <= 10
+        ORDER BY month_year    
   ```
   3. For all of these top 10 interests - which interest appears the most often?
   
   ```SQL
-    
+        SELECT DISTINCT interest_name, COUNT(interest_name) OVER(PARTITION BY interest_name) #frequency 
+        FROM
+          (SELECT interest_name, DATENAME(MM,month_year) [month], month_year, avg_composition,
+                ROW_NUMBER() OVER(PARTITION BY month_year ORDER BY avg_composition DESC) #Rank
+           FROM comp
+           WHERE _month IS NOT NULL) Q
+        WHERE #Rank <= 10
+        ORDER BY #frequency DESC
+            
   ```
   4. What is the average of the average composition for the top 10 interests for each month?
   
   ```SQL
-    
+      WITH Q AS
+        (SELECT DISTINCT interest_id
+        FROM
+          (SELECT interest_id, DATENAME(MM,month_year) [month], month_year, avg_composition,
+                ROW_NUMBER() OVER(PARTITION BY month_year ORDER BY avg_composition DESC) #Rank
+           FROM comp
+           WHERE _month IS NOT NULL) Q
+        WHERE #Rank <= 10)
+
+      SELECT DISTINCT month_year, DATENAME(MM,month_year) [month], AVG(avg_composition) OVER(PARTITION BY month_year) avg_avg_comp
+      FROM comp 
+      WHERE interest_id IN (SELECT * FROM Q)
+      ORDER BY month_year
   ```
   5. What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output shown below.
   
   ```SQL
-    
+      --
+      WITH Q AS
+        (SELECT DISTINCT interest_id
+         FROM
+           (SELECT interest_id, month_year, avg_composition,
+                 ROW_NUMBER() OVER(PARTITION BY month_year ORDER BY avg_composition DESC) #Rank
+            FROM comp
+            WHERE _month IS NOT NULL) Q
+         WHERE #Rank <= 10)
+      --
+      SELECT month_year, [month], interest_name, max_avg_comp, 
+             CONVERT(DEC(10,2), AVG(max_avg_comp) OVER(ORDER BY month_year ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)) [3_month_rolling_avg],
+             CONCAT_WS(' ',LAG(interest_name,1) OVER(ORDER BY month_year),LAG(max_avg_comp,1) OVER(ORDER BY month_year)) [1_month_ago],
+             CONCAT_WS(' ',LAG(interest_name,2) OVER(ORDER BY month_year),LAG(max_avg_comp,2) OVER(ORDER BY month_year)) [2_months_ago]
+      FROM
+        (SELECT DISTINCT month_year, DATENAME(MM,month_year) [month], interest_name, avg_composition max_avg_comp
+        FROM comp c1
+        WHERE interest_id IN (SELECT * FROM Q)
+        AND avg_composition = (SELECT MAX(avg_composition) 
+                               FROM comp c2
+                               WHERE c1.month_year = c2.month_year)) subq
+      ORDER BY month_year
+      OFFSET 2 ROWS
+   
   ```
   6. Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
   
