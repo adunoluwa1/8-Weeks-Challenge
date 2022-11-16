@@ -72,7 +72,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   <details><summary>View table</summary>
     <p>
     
-    ```
+    
     |id   |parent_id| level_text          |   level_name  |
     |-----|---------|---------------------|---------------|
     |1    |         |  Womens             |   Category    |
@@ -93,7 +93,7 @@ For this case study there is a total of 4 datasets for this case study. However 
     |16   |   6     |  Navy Solid         |   Style       |
     |17   |   6     |  White Striped      |   Style       |
     |18   |   6     |  Pink Fluro Polkadot|   Style       |
-    ```
+   
     </p>
   </details>
 
