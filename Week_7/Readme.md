@@ -26,7 +26,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   <details><summary>View table</summary>
     <p>
   
-  ```
+  
   |product_id | price   |   product_name                    |category_id |segment_id |style_id|	category_name|  segment_name| style_name         |
   |-----------|---------|-----------------------------------|------------|-----------|--------|--------------|--------------|--------------------|
   |c4a632     | 13      |   Navy Oversized Jeans - Womens   |1           |3          |7       |  Womens      |      Jeans   | Navy Oversized     |    
@@ -41,7 +41,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   |f084eb     | 36      |   Navy Solid Socks - Mens         |2           |6          |16      |  Mens        |      Socks   | Navy Solid         |
   |b9a74d     | 17      |   White Striped Socks - Mens      |2           |6          |17      |  Mens        |      Socks   | White Striped      |
   |2feb6b     | 29      |   Pink Fluro Polkadot Socks - Mens|2           |6          |18      |  Mens        |      Socks   | Pink Fluro Polkadot|       
-  ```
+  
     </p>
   </details>
 
@@ -50,7 +50,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   <details><summary>View table</summary>
     <p>
   
-    ```
+    
   |prod_id |   qty  |   price   | discount  |   member  |   txn_id  |   start_txn_time              |
   |--------|--------|-----------|-----------|-----------|-----------|-------------------------------|
   |c4a632  |    4   |   13      |   17      |   t       |   54f307  |   2021-02-13 01:59:43.296     |
@@ -63,7 +63,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   |2a2353  |    3   |   57      |   21      |   t       |   26cc98  |   2021-01-19 01:39:00.3456    |
   |f084eb  |    3   |   36      |   21      |   t       |   26cc98  |   2021-01-19 01:39:00.3456    |
   |c4a632  |    1   |   13      |   21      |   f       |   ef648d  |   2021-01-27 02:18:17.1648    |
-    ```
+   
     </p>
   </details>
 
@@ -102,7 +102,7 @@ For this case study there is a total of 4 datasets for this case study. However 
   <details><summary>View table</summary>
     <p>
   
-    ```
+    
     |id  |product_id|price   |
     |----|----------|--------|
     |7   |c4a632    |    13  |
@@ -117,7 +117,7 @@ For this case study there is a total of 4 datasets for this case study. However 
     |16  |f084eb    |    36  |
     |17  |b9a74d    |    17  |
     |18  |2feb6b    |    29  |
-    ```
+    
     </p>
   </details>
  
