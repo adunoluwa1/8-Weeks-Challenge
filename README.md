@@ -1,6 +1,7 @@
-# 8-Weeks-Challenge
+# Data Exploration in SQL
+### 8-Weeks SQL Challenge
 
-Check the official site for the challenge at https://8weeksqlchallenge.com/
+Check the official site for the project at https://8weeksqlchallenge.com/
 
 # [Week 1](/Week_1)
 # [Week 2](/Week_2)
