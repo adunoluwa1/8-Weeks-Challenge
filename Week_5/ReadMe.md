@@ -31,15 +31,15 @@ For this case study there is only a single table: weekly_sales
 
 - Weekly Sales
     
-  ### Column Dictionary
-      The columns are pretty self-explanatory based on the column names but here are some further details about the dataset:
-       
-      1. Data Mart has international operations using a multi-region strategy
-      2. Data Mart has both, a retail and online platform in the form of a Shopify store front to serve their customers
-      3. Customer segment and customer_type data relates to personal age and demographics information that is shared with Data Mart
-      4. transactions is the count of unique purchases made through Data Mart and sales is the actual dollar amount of purchases
-      Each record in the dataset is related to a specific aggregated slice of the underlying sales data rolled up into a week_date value which represents the start of the sales week.
-    
+  ## Column Dictionary
+    The columns are pretty self-explanatory based on the column names but here are some further details about the dataset:
+     
+    1. Data Mart has international operations using a multi-region strategy
+    2. Data Mart has both, a retail and online platform in the form of a Shopify store front to serve their customers
+    3. Customer segment and customer_type data relates to personal age and demographics information that is shared with Data Mart
+    4. transactions is the count of unique purchases made through Data Mart and sales is the actual dollar amount of purchases
+    Each record in the dataset is related to a specific aggregated slice of the underlying sales data rolled up into a week_date value which represents the start of the sales week.
+
   <details><summary>View table</summary>
     <p>
   
