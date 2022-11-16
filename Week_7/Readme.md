@@ -73,26 +73,26 @@ For this case study there is a total of 4 datasets for this case study. However 
     <p>
     
     ```
-  |id   |parent_id|	 level_text	        |   level_name  |
-  |-----|---------|---------------------|---------------|
-  |1    |         |	 Womens             |   Category    |
-  |2    |         |  Mens               |   Category    |
-  |3    |   1     |	 Jeans              |   Segment     |
-  |4    |   1     |	 Jacket             |   Segment     |
-  |5    |   2     |	 Shirt              |   Segment     |
-  |6    |   2     |	 Socks              |   Segment     |
-  |7    |   3     |	 Navy Oversized     |   Style       |
-  |8    |   3     |	 Black Straight     |   Style       |
-  |9    |   3     |	 Cream Relaxed      |   Style       |
-  |10   |   4     |	 Khaki Suit         |   Style       |
-  |11   |   4     |	 Indigo Rain        |   Style       |
-  |12   |   4     |	 Grey Fashion       |   Style       |
-  |13   |   5     |	 White Tee          |   Style       |
-  |14   |   5     |	 Teal Button Up     |   Style       |
-  |15   |   5     |	 Blue Polo          |   Style       |
-  |16   |   6     |	 Navy Solid         |   Style       |
-  |17   |   6     |	 White Striped      |   Style       |
-  |18   |   6     |	 Pink Fluro Polkadot|   Style       |
+    |id   |parent_id| level_text          |   level_name  |
+    |-----|---------|---------------------|---------------|
+    |1    |         |  Womens             |   Category    |
+    |2    |         |  Mens               |   Category    |
+    |3    |   1     |  Jeans              |   Segment     |
+    |4    |   1     |  Jacket             |   Segment     |
+    |5    |   2     |  Shirt              |   Segment     |
+    |6    |   2     |  Socks              |   Segment     |
+    |7    |   3     |  Navy Oversized     |   Style       |
+    |8    |   3     |  Black Straight     |   Style       |
+    |9    |   3     |  Cream Relaxed      |   Style       |
+    |10   |   4     |  Khaki Suit         |   Style       |
+    |11   |   4     |  Indigo Rain        |   Style       |
+    |12   |   4     |  Grey Fashion       |   Style       |
+    |13   |   5     |  White Tee          |   Style       |
+    |14   |   5     |  Teal Button Up     |   Style       |
+    |15   |   5     |  Blue Polo          |   Style       |
+    |16   |   6     |  Navy Solid         |   Style       |
+    |17   |   6     |  White Striped      |   Style       |
+    |18   |   6     |  Pink Fluro Polkadot|   Style       |
     ```
     </p>
   </details>
@@ -103,20 +103,20 @@ For this case study there is a total of 4 datasets for this case study. However 
     <p>
   
     ```
-  |id  |product_id|price   |
-  |----|----------|--------|
-  |7   |c4a632    |    13  |
-  |8   |e83aa3    |    32  |
-  |9   |e31d39    |    10  |
-  |10  |d5e9a6    |    23  |
-  |11  |72f5d4    |    19  |
-  |12  |9ec847    |    54  |
-  |13  |5d267b    |    40  |
-  |14  |c8d436    |    10  |
-  |15  |2a2353    |    57  |
-  |16  |f084eb    |    36  |
-  |17  |b9a74d    |    17  |
-  |18  |2feb6b    |    29  |
+    |id  |product_id|price   |
+    |----|----------|--------|
+    |7   |c4a632    |    13  |
+    |8   |e83aa3    |    32  |
+    |9   |e31d39    |    10  |
+    |10  |d5e9a6    |    23  |
+    |11  |72f5d4    |    19  |
+    |12  |9ec847    |    54  |
+    |13  |5d267b    |    40  |
+    |14  |c8d436    |    10  |
+    |15  |2a2353    |    57  |
+    |16  |f084eb    |    36  |
+    |17  |b9a74d    |    17  |
+    |18  |2feb6b    |    29  |
     ```
     </p>
   </details>
