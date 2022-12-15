@@ -113,23 +113,21 @@ The following case study questions require some data cleaning steps before we st
    3. How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
    
 
-## Reporting Challenge
-  > Write a single SQL script that combines all of the previous questions into a scheduled report that the Balanced Tree team can run at the beginning of each month to calculate the previous month’s values.
-  
-  > Imagine that the Chief Financial Officer (which is also Danny) has asked for all of these questions at the end of every month.
-  
-  > He first wants you to generate the data for January only - but then he also wants you to demonstrate that you can easily run the samne analysis for February without many changes (if at all).
-  
-  > Feel free to split up your final outputs into as many tables as you need - but be sure to explicitly reference which table outputs relate to which question for full marks :)
+## Bonus Question
+  Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
+   - region
+   - platform
+   - age_band
+   - demographic
+   - customer_type
    
-## Bonus Questions
+   Do you have any further recommendations for Danny’s team at Data Mart or any interesting insights based off this analysis?
+   
+## Conclusion
 
-  > Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
-    - region
-    - platform
-    - age_band
-    - demographic
-    - customer_type
+  > This case study actually is based off a real life change in Australia retailers where plastic bags were no longer provided for free - as you can expect, some customers would have changed their shopping behaviour because of this change!
+
+  > Analysis which is related to certain key events which can have a significant impact on sales or engagement metrics is always a part of the data analytics menu. 
 
 
 # 🏆 Solutions
