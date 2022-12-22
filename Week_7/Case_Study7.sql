@@ -218,7 +218,7 @@
                     FROM        
                         (SELECT COALESCE(member, 'total') member, COUNT(DISTINCT txn_id) AS txn
                         FROM sales
-                        GROUP BY member  WITH ROLLUP) Q
+                        GROUP BY member WITH ROLLUP) Q
                 -- Pivoting
                     PIVOT(
                         SUM(txn)

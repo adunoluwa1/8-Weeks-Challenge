@@ -17659,7 +17659,7 @@
         -- customer_type
         -- Creating Stored Procedure
 
-            -- ALTER PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
+            -- CREATE OR ALTER PROCEDURE Bonus @wk INT, @dt DATE, @area VARCHAR(64)
             -- AS
             --     WITH 
             --         [4WKS_BEFORE] AS 

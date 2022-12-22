@@ -9580,7 +9580,7 @@
         
         --Using Percentile_cont()
         SELECT  DISTINCT region_id,
-                CONVERT(DEC(10,2), PERCENTILE_CONT(.5) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
+                CONVERT(DEC(10,2), PERCENTILE_CONT(.5) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [50th Percentile],
                 CONVERT(DEC(10,2), PERCENTILE_CONT(.8) WITHIN GROUP (ORDER BY r_time) OVER(PARTITION BY region_id)) AS [80th Percentile],
                 CONVERT(DEC(10,2), PERCENTILE_CONT(.95) WITHIN GROUP(ORDER BY r_time) OVER(PARTITION BY region_id)) AS [95th Percentile]
         FROM reallocation_days
