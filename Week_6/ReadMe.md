@@ -131,9 +131,6 @@ For this case study there is a total of 5 datasets which you will need to combin
   
   
 # ✒️ Case Study Questions
-The following questions can be considered key business questions and metrics that the Balanced Tree team requires for their monthly reports.
-
-Each question can be answered using a single query - but as you are writing the SQL to solve each individual problem, keep in mind how you would generate all of these metrics in a single SQL script which the Balanced Tree team can run each month.
 
 ## Digital Analysis
    1. How many users are there?
