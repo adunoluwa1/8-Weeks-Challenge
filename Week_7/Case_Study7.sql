@@ -264,6 +264,13 @@
                          FROM sales
                          GROUP BY member) r
                  ON s.member = r.member) Q
+                 
+        -- Alternatively
+            SELECT member, revenue/#txns AS Avg_revenue
+            FROM    
+                (SELECT DISTINCT member, SUM(price * qty * (1 - discount/100.0)) revenue, COUNT(DISTINCT txn_id) as #txns
+                 FROM sales
+                 GROUP BY member) Q
             
         -- Group By
             SELECT member, SUM(qty * price * (1 - discount/100.0))/COUNT(DISTINCT txn_id) Avg_revenue
